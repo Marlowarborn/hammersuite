@@ -1,3 +1,4 @@
+"use client";
 import Header from "@/components/marketing/Header";
 import Footer from "@/components/marketing/Footer";
 
