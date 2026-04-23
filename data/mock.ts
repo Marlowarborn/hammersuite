@@ -1,9 +1,9 @@
 export const MOCK_SALES = [
-  { id: "s1", name: "Modern & Contemporary Art", date: "2026-04-18", location: "Paris — Salle Drouot", status: "active" as const, lots: 84, estimate: "1.2M – 1.8M", notes: "" },
-  { id: "s2", name: "Jewellery & Fine Silver", date: "2026-04-24", location: "Lyon — Hotel des Ventes", status: "active" as const, lots: 142, estimate: "320K – 480K", notes: "" },
-  { id: "s3", name: "Old Masters & European Paintings", date: "2026-05-07", location: "Paris — Salle Drouot", status: "upcoming" as const, lots: 67, estimate: "850K – 1.4M", notes: "" },
-  { id: "s4", name: "Design & Decorative Arts", date: "2026-05-15", location: "Bordeaux — Hotel des Ventes", status: "upcoming" as const, lots: 210, estimate: "180K – 290K", notes: "" },
-  { id: "s5", name: "Asian Art & Ceramics", date: "2026-03-12", location: "Paris — Salle Drouot", status: "completed" as const, lots: 95, estimate: "740K – 1.1M", notes: "" },
+  { id: "s1", name: "Modern & Contemporary Art", date: "2026-04-18", location: "Paris — Salle Drouot", status: "active" as const, lots: 84, estimate: "1.2M – 1.8M", notes: "", category: "" },
+  { id: "s2", name: "Jewellery & Fine Silver", date: "2026-04-24", location: "Lyon — Hotel des Ventes", status: "active" as const, lots: 142, estimate: "320K – 480K", notes: "", category: "" },
+  { id: "s3", name: "Old Masters & European Paintings", date: "2026-05-07", location: "Paris — Salle Drouot", status: "upcoming" as const, lots: 67, estimate: "850K – 1.4M", notes: "", category: "" },
+  { id: "s4", name: "Design & Decorative Arts", date: "2026-05-15", location: "Bordeaux — Hotel des Ventes", status: "upcoming" as const, lots: 210, estimate: "180K – 290K", notes: "", category: "" },
+  { id: "s5", name: "Asian Art & Ceramics", date: "2026-03-12", location: "Paris — Salle Drouot", status: "completed" as const, lots: 95, estimate: "740K – 1.1M", notes: "", category: "" },
 ];
 
 export const MOCK_LOTS = [
