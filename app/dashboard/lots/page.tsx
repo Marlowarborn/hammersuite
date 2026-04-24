@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { MOCK_SALES } from "@/data/mock";
+import ImportModal from "@/components/app/ImportModal";
 
 type TypeEntree = "volontaire" | "judiciaire" | "depot";
 type StatusObjet = "en_attente" | "attribue" | "vendu" | "invendu" | "restitue";
@@ -70,6 +71,7 @@ export default function LotsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showAttribuer, setShowAttribuer] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [filter, setFilter] = useState<StatusObjet | "all">("all");
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(emptyForm());
@@ -253,6 +255,9 @@ export default function LotsPage() {
           <h1 className="serif" style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 4 }}>Répertoire</h1>
           <p style={{ fontSize: 14, color: "var(--muted)" }}>{objets.length} objets · {counts.en_attente} en attente d&apos;attribution</p>
         </div>
+        <button onClick={() => setShowImport(true)} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--white)", color: "var(--ink)", border: "1px solid var(--border)", cursor: "pointer", padding: "9px 18px", borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500, marginRight: 8 }}>
+          Import document ↑
+        </button>
         <button onClick={() => { setForm(emptyForm()); setShowCreate(true); }} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--black)", color: "white", border: "none", cursor: "pointer", padding: "9px 18px", borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500 }}>
           + Enregistrer un objet
         </button>
@@ -360,6 +365,26 @@ export default function LotsPage() {
           </div>
         )}
       </div>
+
+      {showImport && (
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onImport={(newObjets) => {
+            const toAdd = newObjets.map((o, i) => ({
+              ...o,
+              id: `o${Date.now()}-${i}`,
+              numero_repertoire: `${new Date().getFullYear()}-${String(objets.length + i + 1).padStart(3, "0")}`,
+              date_entree: new Date().toISOString().split("T")[0],
+              type_entree: "volontaire" as const,
+              status: "en_attente" as const,
+              vente_id: null,
+              numero_lot: null,
+              prix_adjudication: null,
+            }));
+            setObjets([...toAdd, ...objets]);
+          }}
+        />
+      )}
 
       {/* Create modal */}
       {showCreate && (
