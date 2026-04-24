@@ -166,7 +166,7 @@ export default function Sidebar() {
               whiteSpace: "nowrap",
             }}
           >
-            HammerSuite
+            Marto.io
           </span>
         )}
       </div>

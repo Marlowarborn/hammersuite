@@ -51,7 +51,7 @@ export default function HomePage() {
               One platform.<br />Every workflow.
             </h2>
             <p style={{ fontSize: 17, color: "var(--muted)", maxWidth: 480, margin: "0 auto", lineHeight: 1.65 }}>
-              From first estimate to final export — HammerSuite handles the operational complexity so your team can focus on what matters.
+              From first estimate to final export — Marto.io handles the operational complexity so your team can focus on what matters.
             </p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 1, background: "var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>

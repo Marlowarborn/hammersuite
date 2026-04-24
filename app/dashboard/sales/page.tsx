@@ -240,7 +240,7 @@ export default function SalesPage() {
           <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
             {lots.length === 0
               ? "Importez des lots avant de générer le catalogue."
-              : `${lots.length} lots prêts · PDF print-ready généré via HammerSuite`}
+              : `${lots.length} lots prêts · PDF print-ready généré via Marto.io`}
           </p>
 
           {!pdfUrl ? (

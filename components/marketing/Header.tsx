@@ -85,7 +85,7 @@ export default function Header() {
               letterSpacing: "-0.01em",
             }}
           >
-            HammerSuite
+            Marto.io
           </span>
         </Link>
 

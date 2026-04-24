@@ -86,7 +86,7 @@ export default function CataloguePage() {
         {step === 1 && (
           <div style={{ maxWidth: 560 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 6 }}>Upload your template</h2>
-            <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24 }}>HammerSuite uses your existing house template and injects lot content directly. Your brand, your layout.</p>
+            <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24 }}>Marto.io uses your existing house template and injects lot content directly. Your brand, your layout.</p>
             {!templateUploaded ? (
               <div onClick={() => setTemplateUploaded(true)} style={{ border: "2px dashed var(--border-dark)", borderRadius: "var(--radius-lg)", padding: 48, textAlign: "center", cursor: "pointer" }}>
                 <p style={{ fontSize: 15, fontWeight: 500, marginBottom: 6 }}>Drop your template here</p>
@@ -109,10 +109,10 @@ export default function CataloguePage() {
         {step === 2 && (
           <div style={{ maxWidth: 600 }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 6 }}>Map placeholders</h2>
-            <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24 }}>Match each placeholder in your template to a HammerSuite field.</p>
+            <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24 }}>Match each placeholder in your template to a Marto.io field.</p>
             <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
               <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                {["Template placeholder", "HammerSuite field"].map(h => (
+                {["Template placeholder", "Marto.io field"].map(h => (
                   <p key={h} style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)" }}>{h}</p>
                 ))}
               </div>

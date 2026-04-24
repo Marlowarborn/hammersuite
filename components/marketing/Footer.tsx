@@ -61,7 +61,7 @@ export default function Footer() {
                   fontWeight: 600,
                 }}
               >
-                HammerSuite
+                Marto.io
               </span>
             </div>
             <p
@@ -158,7 +158,7 @@ export default function Footer() {
           }}
         >
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>
-            © 2026 HammerSuite. All rights reserved.
+            © 2026 Marto.io. All rights reserved.
           </p>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>
             Paris · Lyon · Bordeaux
