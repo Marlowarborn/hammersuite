@@ -2,17 +2,33 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase";
 import Waves from "@/components/marketing/Waves";
 import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
+  const supabase = createClient();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      setError("Email ou mot de passe incorrect");
+      setLoading(false);
+      return;
+    }
+
     router.push("/dashboard");
+    router.refresh();
   };
 
   return (
@@ -31,42 +47,45 @@ export default function LoginPage() {
           <span style={{ fontFamily: "var(--font-serif)", fontSize: 18, fontWeight: 600, color: "var(--black)" }}>Marto.io</span>
         </Link>
 
-        <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 6 }}>Sign in</h2>
-        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 28 }}>Welcome back. Enter your credentials to continue.</p>
+        <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 6 }}>Connexion</h2>
+        <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 28 }}>
+          Bienvenue. Connectez-vous à votre espace.
+        </p>
 
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Email</label>
-            <input
-              type="email"
-              placeholder="you@maisonduventes.fr"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)" }}
-            />
+            <input type="email" placeholder="vous@maisonduventes.fr"
+              value={email} onChange={e => setEmail(e.target.value)} required
+              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)" }} />
           </div>
+
           <div style={{ marginBottom: 24 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Password</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)" }}
-            />
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Mot de passe</label>
+              <Link href="/forgot-password" style={{ fontSize: 12, color: "var(--muted)", textDecoration: "none" }}>Oublié ?</Link>
+            </div>
+            <input type="password" placeholder="••••••••"
+              value={password} onChange={e => setPassword(e.target.value)} required
+              style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)" }} />
           </div>
-          <button type="submit" style={{ width: "100%", padding: "12px", background: "var(--black)", color: "white", border: "none", borderRadius: "var(--radius)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
-            Sign in →
+
+          {error && (
+            <div style={{ marginBottom: 16, padding: "10px 14px", background: "rgba(139,58,58,0.08)", border: "1px solid rgba(139,58,58,0.2)", borderRadius: "var(--radius)", fontSize: 13, color: "var(--error)" }}>
+              {error}
+            </div>
+          )}
+
+          <button type="submit" disabled={loading}
+            style={{ width: "100%", padding: "12px", background: "var(--black)", color: "white", border: "none", borderRadius: "var(--radius)", fontSize: 14, fontWeight: 500, cursor: "pointer", opacity: loading ? 0.6 : 1 }}>
+            {loading ? "Connexion..." : "Se connecter →"}
           </button>
         </form>
 
         <p style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: "var(--muted)" }}>
-          Any email and password works for the demo.
+          Pas encore de compte ?{" "}
+          <Link href="/signup" style={{ color: "var(--black)", fontWeight: 500, textDecoration: "none" }}>Créer votre espace</Link>
         </p>
-
-        <Link href="/" style={{ display: "block", textAlign: "center", marginTop: 12, fontSize: 13, color: "var(--muted)", textDecoration: "none" }}>
-          ← Back to homepage
-        </Link>
       </div>
     </div>
   );
