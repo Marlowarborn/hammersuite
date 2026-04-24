@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { MOCK_SALES } from "@/data/mock";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase";
 import ImportModal from "@/components/app/ImportModal";
 
 type TypeEntree = "volontaire" | "judiciaire" | "depot";
@@ -29,14 +29,6 @@ type Objet = {
   notes: string;
 };
 
-const MOCK_OBJETS: Objet[] = [
-  { id: "o1", numero_repertoire: "2026-001", date_entree: "2026-03-15", type_entree: "volontaire", titre: "Composition abstraite", description: "Huile sur toile signée en bas à droite", artiste: "Joan Miró", dimensions: "46 × 61 cm", technique: "Huile sur toile", epoque: "Circa 1965", provenance: "Collection particulière, Paris", consignateur: "Mme. Fontaine-Roux", estimation_basse: 45000, estimation_haute: 65000, status: "attribue", vente_id: "s1", numero_lot: "001", prix_adjudication: null, notes: "" },
-  { id: "o2", numero_repertoire: "2026-002", date_entree: "2026-03-18", type_entree: "judiciaire", titre: "Bague solitaire diamant 3.2ct", description: "Diamant taille brillant, monture platine", artiste: "", dimensions: "—", technique: "Joaillerie", epoque: "Contemporain", provenance: "Saisie judiciaire, TGI Paris", consignateur: "Tribunal de Paris", estimation_basse: 28000, estimation_haute: 34000, status: "en_attente", vente_id: null, numero_lot: null, prix_adjudication: null, notes: "Dossier n°2026-TGI-0892" },
-  { id: "o3", numero_repertoire: "2026-003", date_entree: "2026-03-22", type_entree: "volontaire", titre: "Paysage normand au crépuscule", description: "Huile sur toile signée en bas à gauche", artiste: "J.B.C. Corot", dimensions: "38 × 55 cm", technique: "Huile sur toile", epoque: "Circa 1860", provenance: "Galerie Bernheim-Jeune", consignateur: "Succession Moreau-Valentin", estimation_basse: 80000, estimation_haute: 120000, status: "en_attente", vente_id: null, numero_lot: null, prix_adjudication: null, notes: "" },
-  { id: "o4", numero_repertoire: "2026-004", date_entree: "2026-03-28", type_entree: "depot", titre: "Chaise longue LC4", description: "Édition Cassina, acier chromé et cuir noir", artiste: "Le Corbusier & C. Perriand", dimensions: "160 × 56 × 80 cm", technique: "Acier chromé, cuir", epoque: "Circa 1980", provenance: "Collection privée, Bordeaux", consignateur: "Galerie Marchetti", estimation_basse: 12000, estimation_haute: 18000, status: "vendu", vente_id: "s5", numero_lot: "042", prix_adjudication: 16500, notes: "" },
-  { id: "o5", numero_repertoire: "2026-005", date_entree: "2026-04-02", type_entree: "judiciaire", titre: "Vase en porcelaine, période Qianlong", description: "Porcelaine à décor polychrome de fleurs et oiseaux", artiste: "", dimensions: "H. 42 cm", technique: "Porcelaine émaillée", epoque: "Période Qianlong 1735-1796", provenance: "Collection européenne avant 1970", consignateur: "Tribunal de Lyon", estimation_basse: 35000, estimation_haute: 50000, status: "invendu", vente_id: "s5", numero_lot: "089", prix_adjudication: null, notes: "Restitution prévue le 15/05/2026" },
-];
-
 const STATUS_STYLES: Record<StatusObjet, { bg: string; color: string; label: string }> = {
   en_attente: { bg: "rgba(154,111,46,0.1)", color: "var(--warning)", label: "En attente" },
   attribue: { bg: "rgba(61,122,94,0.1)", color: "var(--success)", label: "Attribué" },
@@ -51,12 +43,6 @@ const TYPE_STYLES: Record<TypeEntree, { label: string; color: string }> = {
   depot: { label: "Dépôt", color: "var(--muted)" },
 };
 
-const NEXT_NUMERO = (objets: Objet[]) => {
-  const year = new Date().getFullYear();
-  const max = objets.filter(o => o.numero_repertoire.startsWith(String(year))).map(o => parseInt(o.numero_repertoire.split("-")[1]) || 0).reduce((a, b) => Math.max(a, b), 0);
-  return `${year}-${String(max + 1).padStart(3, "0")}`;
-};
-
 const emptyForm = () => ({
   titre: "", artiste: "", description: "",
   type_entree: "volontaire" as TypeEntree,
@@ -66,29 +52,48 @@ const emptyForm = () => ({
 });
 
 export default function LotsPage() {
-  const [objets, setObjets] = useState<Objet[]>(MOCK_OBJETS);
+  const supabase = createClient();
+  const [objets, setObjets] = useState<Objet[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [orgId, setOrgId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Objet | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
-  const [showAttribuer, setShowAttribuer] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [filter, setFilter] = useState<StatusObjet | "all">("all");
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(emptyForm());
-  const [selectedVenteId, setSelectedVenteId] = useState("");
-  const [selectedNumeroLot, setSelectedNumeroLot] = useState("");
 
-  const filtered = objets.filter(o => {
-    const matchFilter = filter === "all" || o.status === filter;
-    const matchSearch = search === "" || o.titre.toLowerCase().includes(search.toLowerCase()) || o.artiste.toLowerCase().includes(search.toLowerCase()) || o.numero_repertoire.toLowerCase().includes(search.toLowerCase()) || o.consignateur.toLowerCase().includes(search.toLowerCase());
-    return matchFilter && matchSearch;
-  });
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const handleCreate = () => {
-    if (!form.titre) return;
-    const objet: Objet = {
-      id: `o${Date.now()}`,
-      numero_repertoire: NEXT_NUMERO(objets),
+  const loadData = async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: profile } = await supabase.from("profiles").select("organisation_id").eq("id", user.id).single();
+    if (!profile?.organisation_id) return;
+
+    setOrgId(profile.organisation_id);
+
+    const { data } = await supabase.from("objets").select("*").eq("organisation_id", profile.organisation_id).order("created_at", { ascending: false });
+    setObjets(data || []);
+    setLoading(false);
+  };
+
+  const getNextNumero = () => {
+    const year = new Date().getFullYear();
+    const max = objets.filter(o => o.numero_repertoire?.startsWith(String(year))).map(o => parseInt(o.numero_repertoire.split("-")[1]) || 0).reduce((a, b) => Math.max(a, b), 0);
+    return `${year}-${String(max + 1).padStart(3, "0")}`;
+  };
+
+  const handleCreate = async () => {
+    if (!form.titre || !orgId) return;
+    const objet = {
+      organisation_id: orgId,
+      numero_repertoire: getNextNumero(),
       date_entree: form.date_entree,
       type_entree: form.type_entree,
       titre: form.titre,
@@ -102,73 +107,83 @@ export default function LotsPage() {
       estimation_basse: parseInt(form.estimation_basse) || 0,
       estimation_haute: parseInt(form.estimation_haute) || 0,
       status: "en_attente",
-      vente_id: null, numero_lot: null, prix_adjudication: null,
       notes: form.notes,
     };
-    setObjets([objet, ...objets]);
-    setShowCreate(false);
-    setSelected(objet);
-    setForm(emptyForm());
+    const { data, error } = await supabase.from("objets").insert(objet).select().single();
+    if (!error && data) {
+      setObjets([data, ...objets]);
+      setSelected(data);
+      setShowCreate(false);
+      setForm(emptyForm());
+    }
   };
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!selected || !form.titre) return;
-    const updated = {
-      ...selected,
-      titre: form.titre,
-      artiste: form.artiste,
-      description: form.description,
-      type_entree: form.type_entree,
-      date_entree: form.date_entree,
+    const updates = {
+      titre: form.titre, artiste: form.artiste, description: form.description,
+      type_entree: form.type_entree, date_entree: form.date_entree,
       consignateur: form.consignateur,
       estimation_basse: parseInt(form.estimation_basse) || 0,
       estimation_haute: parseInt(form.estimation_haute) || 0,
-      technique: form.technique,
-      dimensions: form.dimensions,
-      epoque: form.epoque,
-      provenance: form.provenance,
-      notes: form.notes,
+      technique: form.technique, dimensions: form.dimensions,
+      epoque: form.epoque, provenance: form.provenance, notes: form.notes,
     };
-    setObjets(objets.map(o => o.id === selected.id ? updated : o));
-    setSelected(updated);
-    setShowEdit(false);
+    const { data, error } = await supabase.from("objets").update(updates).eq("id", selected.id).select().single();
+    if (!error && data) {
+      setObjets(objets.map(o => o.id === selected.id ? data : o));
+      setSelected(data);
+      setShowEdit(false);
+    }
   };
 
-  const handleAttribuer = () => {
-    if (!selected || !selectedVenteId) return;
-    const vente = MOCK_SALES.find(s => s.id === selectedVenteId);
-    const updated = {
-      ...selected,
-      status: "attribue" as StatusObjet,
-      vente_id: selectedVenteId,
-      numero_lot: selectedNumeroLot || String(objets.filter(o => o.vente_id === selectedVenteId).length + 1).padStart(3, "0"),
-    };
-    setObjets(objets.map(o => o.id === selected.id ? updated : o));
-    setSelected(updated);
-    setShowAttribuer(false);
-    setSelectedVenteId("");
-    setSelectedNumeroLot("");
+  const handleBulkImport = async (newObjets: any[]) => {
+    if (!orgId) return;
+    const year = new Date().getFullYear();
+    const maxExisting = objets.filter(o => o.numero_repertoire?.startsWith(String(year))).map(o => parseInt(o.numero_repertoire.split("-")[1]) || 0).reduce((a, b) => Math.max(a, b), 0);
+
+    const toInsert = newObjets.map((o, i) => ({
+      organisation_id: orgId,
+      numero_repertoire: `${year}-${String(maxExisting + i + 1).padStart(3, "0")}`,
+      date_entree: new Date().toISOString().split("T")[0],
+      type_entree: "volontaire",
+      titre: o.titre || "Sans titre",
+      description: o.description || "",
+      artiste: o.artiste || "",
+      dimensions: o.dimensions || "",
+      technique: o.technique || "",
+      epoque: o.epoque || "",
+      provenance: o.provenance || "",
+      consignateur: o.consignateur || "",
+      estimation_basse: o.estimation_basse || 0,
+      estimation_haute: o.estimation_haute || 0,
+      status: "en_attente",
+      notes: o.notes || "",
+    }));
+
+    const { data, error } = await supabase.from("objets").insert(toInsert).select();
+    if (!error && data) setObjets([...data, ...objets]);
   };
 
   const openEdit = () => {
     if (!selected) return;
     setForm({
-      titre: selected.titre,
-      artiste: selected.artiste,
-      description: selected.description,
-      type_entree: selected.type_entree,
-      date_entree: selected.date_entree,
+      titre: selected.titre, artiste: selected.artiste, description: selected.description,
+      type_entree: selected.type_entree, date_entree: selected.date_entree,
       consignateur: selected.consignateur,
       estimation_basse: String(selected.estimation_basse),
       estimation_haute: String(selected.estimation_haute),
-      technique: selected.technique,
-      dimensions: selected.dimensions,
-      epoque: selected.epoque,
-      provenance: selected.provenance,
-      notes: selected.notes,
+      technique: selected.technique, dimensions: selected.dimensions,
+      epoque: selected.epoque, provenance: selected.provenance, notes: selected.notes,
     });
     setShowEdit(true);
   };
+
+  const filtered = objets.filter(o => {
+    const matchFilter = filter === "all" || o.status === filter;
+    const matchSearch = search === "" || o.titre?.toLowerCase().includes(search.toLowerCase()) || o.artiste?.toLowerCase().includes(search.toLowerCase()) || o.numero_repertoire?.toLowerCase().includes(search.toLowerCase()) || o.consignateur?.toLowerCase().includes(search.toLowerCase());
+    return matchFilter && matchSearch;
+  });
 
   const counts = {
     all: objets.length,
@@ -179,7 +194,7 @@ export default function LotsPage() {
     restitue: objets.filter(o => o.status === "restitue").length,
   };
 
-  const FormFields = ({ isEdit = false }: { isEdit?: boolean }) => (
+  const FormFields = () => (
     <>
       <div style={{ marginBottom: 20 }}>
         <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Type d&apos;entrée</label>
@@ -203,7 +218,7 @@ export default function LotsPage() {
           { label: "Époque / période", key: "epoque", placeholder: "ex. XIXe siècle" },
           { label: "Estimation basse (€)", key: "estimation_basse", type: "number", placeholder: "0" },
           { label: "Estimation haute (€)", key: "estimation_haute", type: "number", placeholder: "0" },
-        ].map(field => (
+        ].map((field: any) => (
           <div key={field.key} style={{ gridColumn: field.full ? "1 / -1" : "auto" }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>{field.label}</label>
             <input type={field.type || "text"} placeholder={field.placeholder || ""}
@@ -231,12 +246,15 @@ export default function LotsPage() {
     </>
   );
 
-  const Modal = ({ title, onClose, onConfirm, confirmLabel, children }: { title: string; onClose: () => void; onConfirm: () => void; confirmLabel: string; children: React.ReactNode }) => (
+  const Modal = ({ title, subtitle, onClose, onConfirm, confirmLabel, children }: any) => (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 200, padding: "40px 24px", overflowY: "auto" }}
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ background: "var(--white)", borderRadius: "var(--radius-lg)", padding: 32, width: "100%", maxWidth: 600, boxShadow: "var(--shadow-lg)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h2 className="serif" style={{ fontSize: 22, fontWeight: 500 }}>{title}</h2>
+          <div>
+            <h2 className="serif" style={{ fontSize: 22, fontWeight: 500 }}>{title}</h2>
+            {subtitle && <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{subtitle}</p>}
+          </div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 20 }}>×</button>
         </div>
         {children}
@@ -253,14 +271,16 @@ export default function LotsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 24 }}>
         <div>
           <h1 className="serif" style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 4 }}>Répertoire</h1>
-          <p style={{ fontSize: 14, color: "var(--muted)" }}>{objets.length} objets · {counts.en_attente} en attente d&apos;attribution</p>
+          <p style={{ fontSize: 14, color: "var(--muted)" }}>{objets.length} objets · {counts.en_attente} en attente</p>
         </div>
-        <button onClick={() => setShowImport(true)} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--white)", color: "var(--ink)", border: "1px solid var(--border)", cursor: "pointer", padding: "9px 18px", borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500, marginRight: 8 }}>
-          Import document ↑
-        </button>
-        <button onClick={() => { setForm(emptyForm()); setShowCreate(true); }} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--black)", color: "white", border: "none", cursor: "pointer", padding: "9px 18px", borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500 }}>
-          + Enregistrer un objet
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={() => setShowImport(true)} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--white)", color: "var(--ink)", border: "1px solid var(--border)", cursor: "pointer", padding: "9px 18px", borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500 }}>
+            Import document ↑
+          </button>
+          <button onClick={() => { setForm(emptyForm()); setShowCreate(true); }} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--black)", color: "white", border: "none", cursor: "pointer", padding: "9px 18px", borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500 }}>
+            + Enregistrer un objet
+          </button>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center", flexWrap: "wrap" }}>
@@ -283,7 +303,12 @@ export default function LotsPage() {
               <p key={h} style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted)" }}>{h}</p>
             ))}
           </div>
-          {filtered.length === 0 && <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--muted)", fontSize: 14 }}>Aucun objet trouvé</div>}
+          {loading && <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--muted)", fontSize: 14 }}>Chargement...</div>}
+          {!loading && filtered.length === 0 && (
+            <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
+              {objets.length === 0 ? "Aucun objet enregistré. Commencez par importer un document ou enregistrer un objet." : "Aucun objet trouvé."}
+            </div>
+          )}
           {filtered.map((objet, i) => {
             const s = STATUS_STYLES[objet.status];
             const t = TYPE_STYLES[objet.type_entree];
@@ -299,7 +324,7 @@ export default function LotsPage() {
                 </div>
                 <span style={{ fontSize: 11, fontWeight: 600, color: t.color }}>{t.label}</span>
                 <p style={{ fontSize: 12, color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{objet.consignateur || "—"}</p>
-                <p style={{ fontSize: 12, fontFamily: "var(--font-serif)", color: "var(--ink)" }}>{objet.estimation_basse.toLocaleString()} – {objet.estimation_haute.toLocaleString()} €</p>
+                <p style={{ fontSize: 12, fontFamily: "var(--font-serif)", color: "var(--ink)" }}>{objet.estimation_basse?.toLocaleString()} – {objet.estimation_haute?.toLocaleString()} €</p>
                 <span style={{ display: "inline-flex", padding: "3px 8px", borderRadius: 99, fontSize: 10, fontWeight: 600, background: s.bg, color: s.color, whiteSpace: "nowrap" }}>{s.label}</span>
               </div>
             );
@@ -315,50 +340,32 @@ export default function LotsPage() {
               </div>
               <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 18 }}>×</button>
             </div>
-
             <div style={{ background: "var(--cream)", aspectRatio: "4/3", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8 }}>
               <p style={{ fontSize: 12, color: "var(--muted)" }}>Aucune photo</p>
               <button style={{ padding: "6px 14px", background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 12, cursor: "pointer" }}>+ Ajouter des photos</button>
             </div>
-
             <div style={{ padding: 20 }}>
               <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--black)", marginBottom: 4, lineHeight: 1.3 }}>{selected.titre}</h3>
               {selected.artiste && <p style={{ fontSize: 13, fontStyle: "italic", color: "var(--muted)", marginBottom: 12 }}>{selected.artiste}</p>}
               {selected.description && <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, marginBottom: 16 }}>{selected.description}</p>}
-
               {([
-                ["Date d'entrée", new Date(selected.date_entree).toLocaleDateString("fr-FR")],
-                ["Type", TYPE_STYLES[selected.type_entree].label],
+                ["Date d'entrée", selected.date_entree ? new Date(selected.date_entree).toLocaleDateString("fr-FR") : "—"],
+                ["Type", TYPE_STYLES[selected.type_entree]?.label],
                 ["Consignateur", selected.consignateur],
                 ["Technique", selected.technique],
                 ["Dimensions", selected.dimensions],
                 ["Époque", selected.epoque],
-                ["Provenance", selected.provenance],
-                ["Estimation", `${selected.estimation_basse.toLocaleString()} – ${selected.estimation_haute.toLocaleString()} €`],
-                ...(selected.vente_id ? [["Vente assignée", MOCK_SALES.find(s => s.id === selected.vente_id)?.name || selected.vente_id], ["N° lot", selected.numero_lot || "—"]] : []),
-                ...(selected.prix_adjudication ? [["Prix d'adjudication", `${selected.prix_adjudication.toLocaleString()} €`]] : []),
+                ["Estimation", `${selected.estimation_basse?.toLocaleString()} – ${selected.estimation_haute?.toLocaleString()} €`],
                 ...(selected.notes ? [["Notes", selected.notes]] : []),
-              ] as [string, string][]).filter(([, v]) => v && v !== "—").map(([label, value]) => (
+              ] as [string, string][]).filter(([, v]) => v && v !== "—" && v !== " – ").map(([label, value]) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: "1px solid var(--border)", fontSize: 13 }}>
                   <span style={{ color: "var(--muted)", flexShrink: 0, marginRight: 12 }}>{label}</span>
                   <span style={{ fontWeight: 500, color: "var(--ink)", textAlign: "right" }}>{value}</span>
                 </div>
               ))}
             </div>
-
             <div style={{ padding: "16px 20px", borderTop: "1px solid var(--border)", display: "flex", gap: 8 }}>
-              {selected.status === "en_attente" && (
-                <button onClick={() => setShowAttribuer(true)} style={{ flex: 1, padding: "8px", background: "var(--black)", color: "white", border: "none", borderRadius: "var(--radius)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
-                  Attribuer à une vente
-                </button>
-              )}
-              {selected.status === "attribue" && (
-                <button onClick={() => { const updated = { ...selected, status: "en_attente" as StatusObjet, vente_id: null, numero_lot: null }; setObjets(objets.map(o => o.id === selected.id ? updated : o)); setSelected(updated); }}
-                  style={{ flex: 1, padding: "8px", background: "var(--surface)", color: "var(--ink)", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 12, cursor: "pointer" }}>
-                  Retirer de la vente
-                </button>
-              )}
-              <button onClick={openEdit} style={{ flex: selected.status === "en_attente" ? "none" : 1, padding: "8px 16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 12, cursor: "pointer" }}>
+              <button onClick={openEdit} style={{ flex: 1, padding: "8px 16px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 12, cursor: "pointer" }}>
                 Modifier
               </button>
             </div>
@@ -366,62 +373,20 @@ export default function LotsPage() {
         )}
       </div>
 
-      {showImport && (
-        <ImportModal
-          onClose={() => setShowImport(false)}
-          onImport={(newObjets) => {
-            const toAdd = newObjets.map((o, i) => ({
-              ...o,
-              id: `o${Date.now()}-${i}`,
-              numero_repertoire: `${new Date().getFullYear()}-${String(objets.length + i + 1).padStart(3, "0")}`,
-              date_entree: new Date().toISOString().split("T")[0],
-              type_entree: "volontaire" as const,
-              status: "en_attente" as const,
-              vente_id: null,
-              numero_lot: null,
-              prix_adjudication: null,
-            }));
-            setObjets([...toAdd, ...objets]);
-          }}
-        />
-      )}
-
-      {/* Create modal */}
       {showCreate && (
-        <Modal title={`Enregistrer un objet — ${NEXT_NUMERO(objets)}`} onClose={() => setShowCreate(false)} onConfirm={handleCreate} confirmLabel="Enregistrer l'objet">
+        <Modal title={`Enregistrer un objet — ${getNextNumero()}`} onClose={() => setShowCreate(false)} onConfirm={handleCreate} confirmLabel="Enregistrer">
           <FormFields />
         </Modal>
       )}
 
-      {/* Edit modal */}
       {showEdit && selected && (
         <Modal title={`Modifier — ${selected.numero_repertoire}`} onClose={() => setShowEdit(false)} onConfirm={handleEdit} confirmLabel="Enregistrer les modifications">
-          <FormFields isEdit />
+          <FormFields />
         </Modal>
       )}
 
-      {/* Attribuer modal */}
-      {showAttribuer && selected && (
-        <Modal title="Attribuer à une vente" onClose={() => setShowAttribuer(false)} onConfirm={handleAttribuer} confirmLabel="Attribuer">
-          <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
-            Sélectionnez la vente à laquelle attribuer <strong>{selected.titre}</strong>.
-          </p>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>Vente</label>
-            <select value={selectedVenteId} onChange={e => setSelectedVenteId(e.target.value)}
-              style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)", background: "var(--white)" }}>
-              <option value="">Sélectionner une vente...</option>
-              {MOCK_SALES.filter(s => s.status !== "completed").map(s => (
-                <option key={s.id} value={s.id}>{s.name} — {new Date(s.date).toLocaleDateString("fr-FR")}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>N° de lot (optionnel)</label>
-            <input placeholder="Laissez vide pour attribution automatique" value={selectedNumeroLot} onChange={e => setSelectedNumeroLot(e.target.value)}
-              style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)" }} />
-          </div>
-        </Modal>
+      {showImport && (
+        <ImportModal onClose={() => setShowImport(false)} onImport={handleBulkImport} />
       )}
     </div>
   );
