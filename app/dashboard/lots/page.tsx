@@ -401,7 +401,7 @@ export default function LotsPage() {
 
       {/* Create modal */}
       {showCreate && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 24 }}
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 200, padding: "40px 24px", overflowY: "auto" }}
           onClick={() => setShowCreate(false)}>
           <div onClick={e => e.stopPropagation()} style={{
             background: "var(--white)", borderRadius: "var(--radius-lg)", padding: 32,
