@@ -247,7 +247,7 @@ export default function LotsPage() {
   );
 
   const Modal = ({ title, subtitle, onClose, onConfirm, confirmLabel, children }: any) => (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "flex-start", justifyContent: "center", zIndex: 1000, padding: "24px", overflowY: "auto" }}
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "24px"}}
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ background: "var(--white)", borderRadius: "var(--radius-lg)", padding: 32, width: "100%", maxWidth: 600, boxShadow: "var(--shadow-lg)", marginTop: "auto", marginBottom: "auto",  }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
