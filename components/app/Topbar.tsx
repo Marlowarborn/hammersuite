@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 export default function Topbar() {
   const router = useRouter();
   const supabase = createClient();
-  const [orgName, setOrgName] = useState("Chargement...");
+  const [orgName, setOrgName] = useState("");
   const [userName, setUserName] = useState("");
   const [initials, setInitials] = useState("--");
   const [showMenu, setShowMenu] = useState(false);
@@ -22,15 +22,21 @@ export default function Topbar() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, organisation_id, organisations(name)")
+      .select("full_name, organisation_id")
       .eq("id", user.id)
       .single();
 
-    if (profile) {
-      const name = profile.full_name || user.email || "";
-      setUserName(name);
-      setInitials(name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2));
-      const org = profile.organisations as any;
+    if (profile?.full_name) {
+      setUserName(profile.full_name);
+      setInitials(profile.full_name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2));
+    }
+
+    if (profile?.organisation_id) {
+      const { data: org } = await supabase
+        .from("organisations")
+        .select("name")
+        .eq("id", profile.organisation_id)
+        .single();
       if (org?.name) setOrgName(org.name);
     }
   };
@@ -44,7 +50,7 @@ export default function Topbar() {
   return (
     <header style={{ height: 56, background: "var(--white)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0, position: "sticky", top: 0, zIndex: 50 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--muted)", marginRight: 8 }}>
-        <span style={{ fontWeight: 600, color: "var(--black)" }}>{orgName}</span>
+        <span style={{ fontWeight: 600, color: "var(--black)" }}>{orgName || "Mon espace"}</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
           <polyline points="9 18 15 12 9 6" />
         </svg>
@@ -70,31 +76,33 @@ export default function Topbar() {
       </button>
 
       <div style={{ position: "relative" }}>
-        <button
-          onClick={() => setShowMenu(!showMenu)}
+        <button onClick={() => setShowMenu(!showMenu)}
           style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 12px", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", cursor: "pointer" }}>
           <div style={{ width: 24, height: 24, background: "var(--charcoal)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: 10, fontWeight: 600, color: "white" }}>{initials}</span>
           </div>
-          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{userName.split(" ")[0]}</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{userName.split(" ")[0] || "..."}</span>
         </button>
 
         {showMenu && (
-          <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-lg)", minWidth: 180, zIndex: 100, overflow: "hidden" }}>
-            <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)" }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: "var(--black)" }}>{userName}</p>
-              <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{orgName}</p>
+          <>
+            <div onClick={() => setShowMenu(false)} style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-lg)", minWidth: 180, zIndex: 100, overflow: "hidden" }}>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)" }}>
+                <p style={{ fontSize: 13, fontWeight: 500, color: "var(--black)" }}>{userName}</p>
+                <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{orgName}</p>
+              </div>
+              <button onClick={handleLogout}
+                style={{ width: "100%", padding: "12px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--error)", textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Se déconnecter
+              </button>
             </div>
-            <button onClick={handleLogout}
-              style={{ width: "100%", padding: "12px 16px", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--error)", textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-              Se déconnecter
-            </button>
-          </div>
+          </>
         )}
       </div>
     </header>
