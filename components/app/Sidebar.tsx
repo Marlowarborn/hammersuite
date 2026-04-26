@@ -5,14 +5,63 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { id: "dashboard", label: "Dashboard", href: "/dashboard" },
-  { id: "sales", label: "Sales", href: "/dashboard/sales" },
-  { id: "lots", label: "Lots", href: "/dashboard/lots" },
-  { id: "catalogue", label: "Catalogue", href: "/dashboard/catalogue" },
-  { id: "crm", label: "CRM", href: "/dashboard/crm" },
-  { id: "estimates", label: "Estimates", href: "/dashboard/estimates" },
-  { id: "analytics", label: "Analytics", href: "/dashboard/analytics" },
-  { id: "settings", label: "Settings", href: "/dashboard/settings" },
+  { id: "dashboard", label: "Tableau de bord", href: "/dashboard", icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  )},
+  { id: "ventes", label: "Ventes", href: "/dashboard/sales", icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/>
+      <path d="M3 9h18M9 21V9"/>
+    </svg>
+  )},
+  { id: "dossiers", label: "Dossiers", href: "/dashboard/dossiers", icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+    </svg>
+  )},
+  { id: "repertoire", label: "Répertoire", href: "/dashboard/lots", icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    </svg>
+  )},
+  { id: "catalogue", label: "Catalogues", href: "/dashboard/catalogue", icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+    </svg>
+  )},
+  { id: "crm", label: "Clients", href: "/dashboard/crm", icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  )},
+  { id: "estimations", label: "Estimations", href: "/dashboard/estimates", icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+    </svg>
+  )},
+  { id: "analytiques", label: "Analytiques", href: "/dashboard/analytics", icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+  )},
+  { id: "parametres", label: "Paramètres", href: "/dashboard/settings", icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M19.07 19.07l-1.41-1.41M5.34 5.34 3.93 3.93M22 12h-2M4 12H2M12 22v-2M12 4V2"/>
+    </svg>
+  )},
+  { id: "saisie", label: "Saisie rapide 📷", href: "/saisie", icon: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+  )},
 ];
 
 export default function Sidebar() {
@@ -31,20 +80,30 @@ export default function Sidebar() {
         </div>
         {!collapsed && <span style={{ fontFamily: "var(--font-serif)", fontSize: 17, fontWeight: 600, color: "var(--black)", whiteSpace: "nowrap" }}>Marto.io</span>}
       </div>
+
       <nav style={{ flex: 1, padding: "12px 8px", overflowY: "auto" }}>
         {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href;
+          const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
           return (
-            <Link key={item.id} href={item.href} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "10px" : "9px 12px", borderRadius: "var(--radius)", background: active ? "var(--cream)" : "transparent", color: active ? "var(--black)" : "var(--muted)", marginBottom: 2, justifyContent: collapsed ? "center" : "flex-start", transition: "all var(--transition)", textDecoration: "none", fontSize: 13.5, fontWeight: active ? 600 : 400 }}>
-              <span>{item.label}</span>
+            <Link key={item.id} href={item.href} title={collapsed ? item.label : ""}
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: collapsed ? "10px" : "9px 12px", borderRadius: "var(--radius)", background: active ? "var(--cream)" : "transparent", color: active ? "var(--black)" : "var(--muted)", marginBottom: 2, justifyContent: collapsed ? "center" : "flex-start", transition: "all var(--transition)", textDecoration: "none", fontSize: 13.5, fontWeight: active ? 600 : 400 }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--surface)"; }}
+              onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}>
+              {item.icon}
+              {!collapsed && <span>{item.label}</span>}
               {!collapsed && active && <div style={{ marginLeft: "auto", width: 5, height: 5, borderRadius: "50%", background: "var(--accent)" }} />}
             </Link>
           );
         })}
       </nav>
+
       <div style={{ padding: "12px 8px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
-        <button onClick={() => setCollapsed(!collapsed)} style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, justifyContent: collapsed ? "center" : "flex-start", padding: collapsed ? "10px" : "9px 12px", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", borderRadius: "var(--radius)", fontSize: 13, fontFamily: "var(--font-sans)" }}>
-          <span>{collapsed ? ">" : "Collapse"}</span>
+        <button onClick={() => setCollapsed(!collapsed)}
+          style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, justifyContent: collapsed ? "center" : "flex-start", padding: collapsed ? "10px" : "9px 12px", background: "none", border: "none", cursor: "pointer", color: "var(--muted)", borderRadius: "var(--radius)", fontSize: 13, fontFamily: "var(--font-sans)" }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            {collapsed ? <polyline points="9 18 15 12 9 6" /> : <><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></>}
+          </svg>
+          {!collapsed && <span>Réduire</span>}
         </button>
       </div>
     </aside>
