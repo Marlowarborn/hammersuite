@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Modal from "@/components/app/Modal";
 import { createClient } from "@/lib/supabase";
 
@@ -68,6 +69,7 @@ const emptyForm = () => ({
 
 export default function DossiersPage() {
   const supabase = createClient();
+  const router = useRouter();
   const [dossiers, setDossiers] = useState<Dossier[]>([]);
   const [loading, setLoading] = useState(true);
   const [orgId, setOrgId] = useState<string | null>(null);
@@ -170,7 +172,7 @@ export default function DossiersPage() {
           {filtered.map((d, i) => {
             const s = STATUTS[d.statut] || STATUTS.en_cours;
             return (
-              <div key={d.id} onClick={() => setSelected(selected?.id === d.id ? null : d)}
+              <div key={d.id} onClick={() => router.push(`/dashboard/dossiers/${d.id}`)}
                 style={{ padding: "14px 20px", borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none", display: "grid", gridTemplateColumns: "120px 1fr 160px 140px 100px", gap: 12, alignItems: "center", cursor: "pointer", background: selected?.id === d.id ? "var(--accent-light)" : "transparent", transition: "background var(--transition)" }}
                 onMouseEnter={e => { if (selected?.id !== d.id) e.currentTarget.style.background = "var(--surface)"; }}
                 onMouseLeave={e => { if (selected?.id !== d.id) e.currentTarget.style.background = "transparent"; }}>
