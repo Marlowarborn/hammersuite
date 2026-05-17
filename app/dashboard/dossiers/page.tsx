@@ -43,6 +43,32 @@ const STATUTS: Record<string, { bg: string; color: string; label: string }> = {
   suspendu: { bg: "rgba(154,111,46,0.1)", color: "var(--warning)", label: "Suspendu" },
 };
 
+type DossierForm = Record<string, string>;
+
+function Field({
+  label,
+  k,
+  type = "text",
+  placeholder = "",
+  form,
+  onChange,
+}: {
+  label: string;
+  k: string;
+  type?: string;
+  placeholder?: string;
+  form: DossierForm;
+  onChange: (k: string, v: string) => void;
+}) {
+  return (
+    <div>
+      <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</label>
+      <input type={type} placeholder={placeholder} value={form[k] ?? ""} onChange={e => onChange(k, e.target.value)}
+        style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 13, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)", background: "var(--white)" }} />
+    </div>
+  );
+}
+
 const emptyForm = () => ({
   numero: "",
   nature: "Liquidation Judiciaire",
@@ -120,14 +146,6 @@ export default function DossiersPage() {
   });
 
   const f = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
-
-  const Field = ({ label, k, type = "text", placeholder = "" }: { label: string; k: string; type?: string; placeholder?: string }) => (
-    <div>
-      <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</label>
-      <input type={type} placeholder={placeholder} value={(form as any)[k]} onChange={e => f(k, e.target.value)}
-        style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 13, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)", background: "var(--white)" }} />
-    </div>
-  );
 
   return (
     <div className="fade-up">
@@ -262,7 +280,7 @@ export default function DossiersPage() {
       <div style={{ padding: "16px", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
         <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)", marginBottom: 12 }}>Identification</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="N° Dossier *" k="numero" placeholder="ex. TC21136" />
+          <Field label="N° Dossier *" k="numero" placeholder="ex. TC21136" form={form} onChange={f} />
           <div>
             <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>Nature *</label>
             <select value={form.nature} onChange={e => f("nature", e.target.value)}
@@ -270,39 +288,39 @@ export default function DossiersPage() {
               {NATURES.map(n => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
-          <Field label="Date d'ouverture" k="date_ouverture" type="date" />
-          <Field label="Date de vente prévue" k="date_vente" type="date" />
+          <Field label="Date d'ouverture" k="date_ouverture" type="date" form={form} onChange={f} />
+          <Field label="Date de vente prévue" k="date_vente" type="date" form={form} onChange={f} />
         </div>
       </div>
       <div style={{ padding: "16px", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
         <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)", marginBottom: 12 }}>Débiteur / Vendeur</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <div style={{ gridColumn: "1 / -1" }}><Field label="Nom / Raison sociale *" k="debiteur_nom" placeholder="ex. LA PETITE GROSSE" /></div>
-          <Field label="Forme juridique" k="debiteur_forme_juridique" placeholder="ex. SARL" />
-          <Field label="Adresse" k="debiteur_adresse" placeholder="ex. 8 rue Sofia" />
-          <Field label="Code postal" k="debiteur_code_postal" placeholder="75018" />
-          <Field label="Ville" k="debiteur_ville" placeholder="PARIS" />
+          <div style={{ gridColumn: "1 / -1" }}><Field label="Nom / Raison sociale *" k="debiteur_nom" placeholder="ex. LA PETITE GROSSE" form={form} onChange={f} /></div>
+          <Field label="Forme juridique" k="debiteur_forme_juridique" placeholder="ex. SARL" form={form} onChange={f} />
+          <Field label="Adresse" k="debiteur_adresse" placeholder="ex. 8 rue Sofia" form={form} onChange={f} />
+          <Field label="Code postal" k="debiteur_code_postal" placeholder="75018" form={form} onChange={f} />
+          <Field label="Ville" k="debiteur_ville" placeholder="PARIS" form={form} onChange={f} />
         </div>
       </div>
       <div style={{ padding: "16px", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
         <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)", marginBottom: 12 }}>Judiciaire</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Tribunal" k="tribunal" placeholder="ex. Tribunal de Commerce de Paris" />
-          <Field label="Juge commissaire" k="juge_commissaire" placeholder="ex. Antoine GUINET" />
-          <Field label="Administrateur judiciaire" k="administrateur" />
-          <Field label="Mandataire judiciaire" k="mandataire" />
-          <Field label="N° greffe" k="numero_greffe" placeholder="ex. P202400429" />
-          <Field label="Date jugement" k="date_jugement" type="date" />
-          <div style={{ gridColumn: "1 / -1" }}><Field label="Décret" k="decret" placeholder="ex. Arrêté du 28/02/2020" /></div>
+          <Field label="Tribunal" k="tribunal" placeholder="ex. Tribunal de Commerce de Paris" form={form} onChange={f} />
+          <Field label="Juge commissaire" k="juge_commissaire" placeholder="ex. Antoine GUINET" form={form} onChange={f} />
+          <Field label="Administrateur judiciaire" k="administrateur" form={form} onChange={f} />
+          <Field label="Mandataire judiciaire" k="mandataire" form={form} onChange={f} />
+          <Field label="N° greffe" k="numero_greffe" placeholder="ex. P202400429" form={form} onChange={f} />
+          <Field label="Date jugement" k="date_jugement" type="date" form={form} onChange={f} />
+          <div style={{ gridColumn: "1 / -1" }}><Field label="Décret" k="decret" placeholder="ex. Arrêté du 28/02/2020" form={form} onChange={f} /></div>
         </div>
       </div>
       <div style={{ padding: "16px", background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)" }}>
         <p style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted)", marginBottom: 12 }}>Intervenants</p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Correspondant" k="correspondant" placeholder="ex. Me. Julie PERROT" />
-          <Field label="Email correspondant" k="correspondant_email" />
-          <Field label="Signataire" k="signataire" placeholder="ex. Emmanuel FARRANDO" />
-          <Field label="Collaborateur" k="collaborateur" />
+          <Field label="Correspondant" k="correspondant" placeholder="ex. Me. Julie PERROT" form={form} onChange={f} />
+          <Field label="Email correspondant" k="correspondant_email" form={form} onChange={f} />
+          <Field label="Signataire" k="signataire" placeholder="ex. Emmanuel FARRANDO" form={form} onChange={f} />
+          <Field label="Collaborateur" k="collaborateur" form={form} onChange={f} />
         </div>
       </div>
       <div>
