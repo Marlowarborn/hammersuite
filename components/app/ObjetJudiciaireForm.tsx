@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { Modal, Input, Select, Button, useToast } from "@/components/ui";
+import { RUBRIQUE_LABELS } from "@/lib/labels";
 
 export const RUBRIQUES = [
   { value: "materiel", label: "Matériel" },
@@ -16,9 +17,7 @@ export const RUBRIQUES = [
 
 export type RubriqueValue = (typeof RUBRIQUES)[number]["value"];
 
-export const RUBRIQUE_LABELS: Record<string, string> = Object.fromEntries(
-  RUBRIQUES.map((r) => [r.value, r.label]),
-);
+export { RUBRIQUE_LABELS };
 
 type VehiculeDocKey =
   | "non_gage_url"
