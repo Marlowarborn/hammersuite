@@ -7,6 +7,8 @@ import Link from "next/link";
 import { Badge, Button, EmptyState, Tabs, Modal } from "@/components/ui";
 import ObjetJudiciaireForm, { RUBRIQUES, RUBRIQUE_LABELS, RubriqueValue } from "@/components/app/ObjetJudiciaireForm";
 import DossierForm, { dossierToForm, DossierFormValues } from "@/components/app/DossierForm";
+import ContratsSection from "@/components/app/ContratsSection";
+import LieuxSection from "@/components/app/LieuxSection";
 
 type Dossier = {
   id: string;
@@ -84,8 +86,8 @@ export default function DossierDetailPage() {
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [objets, setObjets] = useState<Objet[]>([]);
   const [loading, setLoading] = useState(true);
-  const initialTab = (searchParams.get("tab") as "infos" | "objets" | "courriers" | null) || "infos";
-  const [activeTab, setActiveTab] = useState<"infos" | "objets" | "courriers">(initialTab);
+  const initialTab = (searchParams.get("tab") as "infos" | "objets" | "annexes" | "courriers" | null) || "infos";
+  const [activeTab, setActiveTab] = useState<"infos" | "objets" | "annexes" | "courriers">(initialTab);
 
   const [rubriqueFilter, setRubriqueFilter] = useState<"all" | RubriqueValue>("all");
   const [showCreateObjet, setShowCreateObjet] = useState(false);
@@ -174,10 +176,11 @@ export default function DossierDetailPage() {
         items={[
           { id: "infos", label: "Informations" },
           { id: "objets", label: `Objets (${objets.length})` },
+          { id: "annexes", label: "Annexes" },
           { id: "courriers", label: "Courriers" },
         ] as const}
         active={activeTab}
-        onChange={(t) => setActiveTab(t as "infos" | "objets" | "courriers")}
+        onChange={(t) => setActiveTab(t as "infos" | "objets" | "annexes" | "courriers")}
         style={{ marginBottom: 24 }}
       />
 
@@ -384,6 +387,13 @@ export default function DossierDetailPage() {
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {activeTab === "annexes" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <ContratsSection dossierId={dossierId} organisationId={dossier.organisation_id} />
+          <LieuxSection dossierId={dossierId} organisationId={dossier.organisation_id} />
         </div>
       )}
 
