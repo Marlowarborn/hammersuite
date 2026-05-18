@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import Link from "next/link";
 import { Badge, Button, EmptyState, Tabs, Modal } from "@/components/ui";
 import ObjetJudiciaireForm, { RUBRIQUES, RUBRIQUE_LABELS, RubriqueValue } from "@/components/app/ObjetJudiciaireForm";
+import DossierForm, { dossierToForm, DossierFormValues } from "@/components/app/DossierForm";
 
 type Dossier = {
   id: string;
@@ -26,11 +27,25 @@ type Dossier = {
   collaborateur: string;
   tribunal: string;
   juge_commissaire: string;
+  juge_commissaire_adresse: string | null;
   administrateur: string;
+  administrateur_adresse: string | null;
   mandataire: string;
+  mandataire_adresse: string | null;
+  greffe_adresse: string | null;
   numero_greffe: string;
   date_jugement: string | null;
   decret: string;
+  securigreffe_id: string | null;
+  societe_assujettie_tva: boolean | null;
+  conseil_nom: string | null;
+  autres_membres: string | null;
+  gerant_nom: string | null;
+  gerant_adresse: string | null;
+  gerant_telephone: string | null;
+  gerant_email: string | null;
+  declaration_honneur_signee: boolean | null;
+  declaration_honneur_url: string | null;
   commentaires: string;
 };
 
@@ -63,18 +78,21 @@ const formatEuro = (n: number | null | undefined) =>
 
 export default function DossierDetailPage() {
   const { id } = useParams();
+  const searchParams = useSearchParams();
   const dossierId = String(id);
   const supabase = createClient();
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [objets, setObjets] = useState<Objet[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"infos" | "objets" | "courriers">("infos");
+  const initialTab = (searchParams.get("tab") as "infos" | "objets" | "courriers" | null) || "infos";
+  const [activeTab, setActiveTab] = useState<"infos" | "objets" | "courriers">(initialTab);
 
   const [rubriqueFilter, setRubriqueFilter] = useState<"all" | RubriqueValue>("all");
   const [showCreateObjet, setShowCreateObjet] = useState(false);
   const [showAddFromRepertoire, setShowAddFromRepertoire] = useState(false);
   const [disponibles, setDisponibles] = useState<Objet[]>([]);
   const [selectedRepertoire, setSelectedRepertoire] = useState<string[]>([]);
+  const [showEdit, setShowEdit] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -142,11 +160,14 @@ export default function DossierDetailPage() {
         <Badge variant={statut.variant} size="md">{statut.label}</Badge>
       </div>
 
-      <div style={{ marginBottom: 28 }}>
-        <h1 className="serif" style={{ fontSize: "var(--text-2xl)", fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 4 }}>{dossier.debiteur_nom}</h1>
-        <p style={{ fontSize: "var(--text-md)", color: "var(--ink-2)" }}>
-          {[dossier.nature, dossier.debiteur_forme_juridique, dossier.debiteur_ville].filter(Boolean).join(" · ")}
-        </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28, gap: 16 }}>
+        <div>
+          <h1 className="serif" style={{ fontSize: "var(--text-2xl)", fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 4 }}>{dossier.debiteur_nom}</h1>
+          <p style={{ fontSize: "var(--text-md)", color: "var(--ink-2)" }}>
+            {[dossier.nature, dossier.debiteur_forme_juridique, dossier.debiteur_ville].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+        <Button variant="secondary" size="md" onClick={() => setShowEdit(true)}>Modifier</Button>
       </div>
 
       <Tabs
@@ -163,25 +184,108 @@ export default function DossierDetailPage() {
       {activeTab === "infos" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
           {[
-            { title: "Débiteur", fields: [["Raison sociale", dossier.debiteur_nom], ["Forme juridique", dossier.debiteur_forme_juridique], ["Adresse", dossier.debiteur_adresse], ["Code postal", dossier.debiteur_code_postal], ["Ville", dossier.debiteur_ville]] },
-            { title: "Procédure judiciaire", fields: [["Nature", dossier.nature], ["Tribunal", dossier.tribunal], ["Juge commissaire", dossier.juge_commissaire], ["Administrateur", dossier.administrateur], ["Mandataire", dossier.mandataire], ["N° greffe", dossier.numero_greffe], ["Décret", dossier.decret], ["Date jugement", dossier.date_jugement ? new Date(dossier.date_jugement).toLocaleDateString("fr-FR") : ""]] },
-            { title: "Dates", fields: [["Date d'ouverture", new Date(dossier.date_ouverture).toLocaleDateString("fr-FR")], ["Date de vente prévue", dossier.date_vente ? new Date(dossier.date_vente).toLocaleDateString("fr-FR") : "Non définie"]] },
-            { title: "Intervenants", fields: [["Correspondant", dossier.correspondant], ["Email", dossier.correspondant_email], ["Signataire", dossier.signataire], ["Collaborateur", dossier.collaborateur]] },
-          ].map((section) => (
-            <div key={section.title} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-              <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
-                <p style={{ fontSize: "var(--text-base)", fontWeight: 600 }}>{section.title}</p>
+            {
+              title: "Débiteur",
+              fields: [
+                ["Raison sociale", dossier.debiteur_nom],
+                ["Forme juridique", dossier.debiteur_forme_juridique],
+                ["Adresse", dossier.debiteur_adresse],
+                ["Code postal", dossier.debiteur_code_postal],
+                ["Ville", dossier.debiteur_ville],
+              ],
+            },
+            {
+              title: "Procédure judiciaire",
+              fields: [
+                ["Nature", dossier.nature],
+                ["Tribunal", dossier.tribunal],
+                ["N° greffe", dossier.numero_greffe],
+                ["Securigreffe", dossier.securigreffe_id],
+                ["Décret", dossier.decret],
+                ["Date jugement", dossier.date_jugement ? new Date(dossier.date_jugement).toLocaleDateString("fr-FR") : ""],
+                ["Date d'ouverture", new Date(dossier.date_ouverture).toLocaleDateString("fr-FR")],
+                ["Date de vente prévue", dossier.date_vente ? new Date(dossier.date_vente).toLocaleDateString("fr-FR") : "Non définie"],
+              ],
+            },
+            {
+              title: "Coordonnées intervenants",
+              fields: [
+                ["Juge commissaire", dossier.juge_commissaire],
+                ["Adresse juge", dossier.juge_commissaire_adresse],
+                ["Mandataire", dossier.mandataire],
+                ["Adresse mandataire", dossier.mandataire_adresse],
+                ["Administrateur", dossier.administrateur],
+                ["Adresse administrateur", dossier.administrateur_adresse],
+                ["Adresse greffe", dossier.greffe_adresse],
+              ],
+            },
+            {
+              title: "Gérant",
+              fields: [
+                ["Nom", dossier.gerant_nom],
+                ["Téléphone", dossier.gerant_telephone],
+                ["Email", dossier.gerant_email],
+                ["Adresse", dossier.gerant_adresse],
+              ],
+            },
+            {
+              title: "Société",
+              fields: [
+                ["Assujettie TVA", dossier.societe_assujettie_tva == null ? "" : dossier.societe_assujettie_tva ? "Oui" : "Non"],
+                ["Conseil", dossier.conseil_nom],
+                ["Autres membres", dossier.autres_membres],
+              ],
+            },
+            {
+              title: "Correspondants étude",
+              fields: [
+                ["Correspondant", dossier.correspondant],
+                ["Email", dossier.correspondant_email],
+                ["Signataire", dossier.signataire],
+                ["Collaborateur", dossier.collaborateur],
+              ],
+            },
+          ].map((section) => {
+            const visible = section.fields.filter(([, v]) => v);
+            if (visible.length === 0) return null;
+            return (
+              <div key={section.title} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+                <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
+                  <p style={{ fontSize: "var(--text-base)", fontWeight: 600 }}>{section.title}</p>
+                </div>
+                <div style={{ padding: "8px 0" }}>
+                  {visible.map(([label, value]) => (
+                    <div key={label as string} style={{ display: "flex", justifyContent: "space-between", padding: "8px 20px", fontSize: "var(--text-base)", gap: 12 }}>
+                      <span style={{ color: "var(--ink-2)" }}>{label}</span>
+                      <span style={{ fontWeight: 500, color: "var(--ink)", textAlign: "right", maxWidth: 240, wordBreak: "break-word" }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div style={{ padding: "8px 0" }}>
-                {section.fields.filter(([, v]) => v).map(([label, value]) => (
-                  <div key={label as string} style={{ display: "flex", justifyContent: "space-between", padding: "8px 20px", fontSize: "var(--text-base)" }}>
-                    <span style={{ color: "var(--ink-2)" }}>{label}</span>
-                    <span style={{ fontWeight: 500, color: "var(--ink)", textAlign: "right", maxWidth: 220 }}>{value}</span>
-                  </div>
-                ))}
-              </div>
+            );
+          })}
+
+          <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+            <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
+              <p style={{ fontSize: "var(--text-base)", fontWeight: 600 }}>Déclaration sur l&apos;honneur</p>
             </div>
-          ))}
+            <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+              <Badge variant={dossier.declaration_honneur_signee ? "success" : "warning"} size="md">
+                {dossier.declaration_honneur_signee ? "Signée" : "Non signée"}
+              </Badge>
+              {dossier.declaration_honneur_url && (
+                <a
+                  href={dossier.declaration_honneur_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: "var(--text-sm)", color: "var(--accent-dark)" }}
+                >
+                  Ouvrir le document
+                </a>
+              )}
+            </div>
+          </div>
+
           {dossier.commentaires && (
             <div style={{ gridColumn: "1 / -1", background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "16px 20px" }}>
               <p style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Commentaires</p>
@@ -300,6 +404,17 @@ export default function DossierDetailPage() {
           defaultRubrique={rubriqueFilter === "all" ? "materiel" : (rubriqueFilter as RubriqueValue)}
           onClose={() => setShowCreateObjet(false)}
           onCreated={loadData}
+        />
+      )}
+
+      {showEdit && dossier && (
+        <DossierForm
+          mode="edit"
+          organisationId={dossier.organisation_id}
+          dossierId={dossier.id}
+          initialValues={dossierToForm(dossier as unknown as Partial<DossierFormValues> & Record<string, unknown>)}
+          onClose={() => setShowEdit(false)}
+          onSaved={(d) => setDossier(d as Dossier)}
         />
       )}
 
