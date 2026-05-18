@@ -2,9 +2,9 @@
 @import "tailwindcss";
 
 :root {
+  /* Base palette (existing) */
   --black: #0f0f0e;
   --charcoal: #1c1c1a;
-  --ink: #2d2d2b;
   --muted: #6b6b68;
   --border: #e8e7e3;
   --border-dark: #d4d3ce;
@@ -17,14 +17,73 @@
   --success: #3d7a5e;
   --warning: #9a6f2e;
   --error: #8b3a3a;
+
+  /* Ink hierarchy */
+  --ink: #2d2d2b;
+  --ink-2: #6b6b68;
+  --ink-3: #a3a29e;
+
+  /* Surface hierarchy */
+  --surface-1: #faf9f7;
+  --surface-2: #ffffff;
+  --surface-3: #f5f4f0;
+
+  /* Border hierarchy */
+  --border-subtle: #efeeea;
+  --border-strong: #d4d3ce;
+
+  /* Semantic status (text/border) */
+  --status-success: #3d7a5e;
+  --status-warning: #9a6f2e;
+  --status-danger: #8b3a3a;
+  --status-info: #3a6b8b;
+  --status-neutral: #6b6b68;
+
+  /* Semantic status (background at ~10%) */
+  --status-success-bg: rgba(61, 122, 94, 0.1);
+  --status-warning-bg: rgba(154, 111, 46, 0.1);
+  --status-danger-bg: rgba(139, 58, 58, 0.1);
+  --status-info-bg: rgba(58, 107, 139, 0.1);
+  --status-neutral-bg: rgba(107, 107, 104, 0.1);
+
+  /* Typography scale */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+  --text-3xl: 40px;
+
+  /* Spacing scale (4/8/12/16/24/32/48/64) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Fonts */
   --font-serif: 'Cormorant', Georgia, serif;
   --font-sans: 'DM Sans', -apple-system, sans-serif;
+
+  /* Radii */
+  --radius-sm: 4px;
   --radius: 6px;
   --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  /* Shadows */
   --shadow-sm: 0 1px 3px rgba(15,15,14,0.06);
   --shadow: 0 2px 8px rgba(15,15,14,0.08);
   --shadow-lg: 0 8px 32px rgba(15,15,14,0.12);
+  --shadow-xl: 0 24px 64px rgba(15,15,14,0.2);
+
   --transition: 150ms ease;
+  --transition-fast: 100ms ease;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -56,6 +115,15 @@ body {
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .wave-layer { animation: wave-drift 12s ease-in-out infinite; }
