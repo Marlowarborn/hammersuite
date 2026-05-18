@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
+import { seedChecklist } from "@/lib/checklists";
 
 type Sale = {
   id: string;
@@ -70,6 +71,7 @@ export default function SalesPage() {
       estimate: "—",
     }).select().single();
     if (!error && data) {
+      await seedChecklist(supabase, orgId, { kind: "volontaire", venteId: data.id });
       setSales([{ ...data, lots: 0, estimate: "—" }, ...sales]);
       setShowCreate(false);
       setForm({ name: "", date: "", location: "", category: "", notes: "" });

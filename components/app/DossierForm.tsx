@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { Modal, Input, Select, Button, useToast } from "@/components/ui";
+import { seedChecklist } from "@/lib/checklists";
 
 const NATURES = [
   "Liquidation Judiciaire",
@@ -234,6 +235,7 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
           return;
         }
         saved = data as Record<string, unknown>;
+        await seedChecklist(supabase, organisationId, { kind: "judiciaire", dossierId: String(saved.id) });
       } else {
         if (!dossierId) return;
         const { data, error } = await supabase

@@ -12,3 +12,5 @@ export { default as Tabs } from "./Tabs";
 export type { TabItem } from "./Tabs";
 export { default as EmptyState } from "./EmptyState";
 export { ToastProvider, useToast } from "./Toast";
+export { default as PhaseTracker } from "./PhaseTracker";
+export type { PhaseTrackerItem } from "./PhaseTracker";

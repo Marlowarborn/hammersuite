@@ -4,11 +4,13 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import Link from "next/link";
-import { Badge, Button, EmptyState, Tabs, Modal } from "@/components/ui";
+import { Badge, Button, EmptyState, Tabs, Modal, PhaseTracker, useToast } from "@/components/ui";
 import ObjetJudiciaireForm, { RUBRIQUES, RUBRIQUE_LABELS, RubriqueValue } from "@/components/app/ObjetJudiciaireForm";
 import DossierForm, { dossierToForm, DossierFormValues } from "@/components/app/DossierForm";
 import ContratsSection from "@/components/app/ContratsSection";
 import LieuxSection from "@/components/app/LieuxSection";
+import PhaseChecklistDrawer, { ChecklistItem, ensureChecklist } from "@/components/app/PhaseChecklistDrawer";
+import { getPhases, PHASES_JUDICIAIRE } from "@/lib/checklists";
 
 type Dossier = {
   id: string;
@@ -16,6 +18,7 @@ type Dossier = {
   numero: string;
   nature: string;
   statut: string;
+  phase: string | null;
   date_ouverture: string;
   date_vente: string | null;
   debiteur_nom: string;
@@ -95,6 +98,9 @@ export default function DossierDetailPage() {
   const [disponibles, setDisponibles] = useState<Objet[]>([]);
   const [selectedRepertoire, setSelectedRepertoire] = useState<string[]>([]);
   const [showEdit, setShowEdit] = useState(false);
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [openPhaseId, setOpenPhaseId] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     loadData();
@@ -111,7 +117,41 @@ export default function DossierDetailPage() {
       .eq("dossier_id", dossierId)
       .order("numero_repertoire", { ascending: true });
     setObjets(objetsData || []);
+    if (dossierData) {
+      await ensureChecklist(dossierData.organisation_id, "judiciaire", { dossierId: dossierData.id });
+      const { data: items } = await supabase
+        .from("checklist_items")
+        .select("*")
+        .eq("dossier_id", dossierData.id)
+        .order("ordre", { ascending: true });
+      setChecklistItems((items || []) as ChecklistItem[]);
+    }
     setLoading(false);
+  };
+
+  const refreshChecklist = async () => {
+    if (!dossier) return;
+    const { data: items } = await supabase
+      .from("checklist_items")
+      .select("*")
+      .eq("dossier_id", dossier.id)
+      .order("ordre", { ascending: true });
+    setChecklistItems((items || []) as ChecklistItem[]);
+  };
+
+  const updatePhase = async (nextPhase: string) => {
+    if (!dossier) return;
+    const { data, error } = await supabase
+      .from("dossiers")
+      .update({ phase: nextPhase })
+      .eq("id", dossier.id)
+      .select()
+      .single();
+    if (error || !data) {
+      toast.error(error?.message || "Impossible de changer la phase.");
+      return;
+    }
+    setDossier(data as Dossier);
   };
 
   const loadDisponibles = async () => {
@@ -170,6 +210,27 @@ export default function DossierDetailPage() {
           </p>
         </div>
         <Button variant="secondary" size="md" onClick={() => setShowEdit(true)}>Modifier</Button>
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <PhaseTracker
+          phases={PHASES_JUDICIAIRE.map((p) => {
+            const phaseItems = checklistItems.filter((i) => i.phase === p.id);
+            return {
+              id: p.id,
+              label: p.label,
+              total: phaseItems.length,
+              done: phaseItems.filter((i) => i.is_done).length,
+            };
+          })}
+          activePhase={dossier.phase || "ouverture"}
+          onSelect={(id) => {
+            setOpenPhaseId(id);
+            if (id !== dossier.phase) {
+              updatePhase(id);
+            }
+          }}
+        />
       </div>
 
       <Tabs
@@ -417,17 +478,6 @@ export default function DossierDetailPage() {
         />
       )}
 
-      {showEdit && dossier && (
-        <DossierForm
-          mode="edit"
-          organisationId={dossier.organisation_id}
-          dossierId={dossier.id}
-          initialValues={dossierToForm(dossier as unknown as Partial<DossierFormValues> & Record<string, unknown>)}
-          onClose={() => setShowEdit(false)}
-          onSaved={(d) => setDossier(d as Dossier)}
-        />
-      )}
-
       {showAddFromRepertoire && (
         <Modal
           title="Ajouter depuis le répertoire"
@@ -467,6 +517,33 @@ export default function DossierDetailPage() {
           )}
         </Modal>
       )}
+
+      {showEdit && dossier && (
+        <DossierForm
+          mode="edit"
+          organisationId={dossier.organisation_id}
+          dossierId={dossier.id}
+          initialValues={dossierToForm(dossier as unknown as Partial<DossierFormValues> & Record<string, unknown>)}
+          onClose={() => setShowEdit(false)}
+          onSaved={(d) => setDossier(d as Dossier)}
+        />
+      )}
+
+      {openPhaseId && dossier && (() => {
+        const phaseDef = getPhases("judiciaire").find((p) => p.id === openPhaseId);
+        if (!phaseDef) return null;
+        return (
+          <PhaseChecklistDrawer
+            kind="judiciaire"
+            phase={phaseDef}
+            organisationId={dossier.organisation_id}
+            dossierId={dossier.id}
+            items={checklistItems}
+            onClose={() => setOpenPhaseId(null)}
+            onChange={refreshChecklist}
+          />
+        );
+      })()}
     </div>
   );
 }
