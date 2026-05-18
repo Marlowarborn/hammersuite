@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
+import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import Link from "next/link";
+import { Badge, Button, EmptyState, Tabs, Modal } from "@/components/ui";
+import ObjetJudiciaireForm, { RUBRIQUES, RUBRIQUE_LABELS, RubriqueValue } from "@/components/app/ObjetJudiciaireForm";
 
 type Dossier = {
   id: string;
+  organisation_id: string;
   numero: string;
   nature: string;
   statut: string;
@@ -34,95 +37,129 @@ type Dossier = {
 type Objet = {
   id: string;
   numero_repertoire: string;
-  titre: string;
-  artiste: string;
-  technique: string;
-  estimation_basse: number;
-  estimation_haute: number;
+  titre: string | null;
+  description: string | null;
+  artiste: string | null;
+  technique: string | null;
+  rubrique: string | null;
+  etat: string | null;
+  valeur_exploitation: number | null;
+  valeur_reprise: number | null;
+  estimation_basse: number | null;
+  estimation_haute: number | null;
   status: string;
+  photo_url: string | null;
   numero_lot: string | null;
 };
 
-const STATUTS: Record<string, { bg: string; color: string; label: string }> = {
-  en_cours: { bg: "rgba(61,122,94,0.1)", color: "var(--success)", label: "En cours" },
-  cloture: { bg: "var(--cream)", color: "var(--muted)", label: "Clôturé" },
-  suspendu: { bg: "rgba(154,111,46,0.1)", color: "var(--warning)", label: "Suspendu" },
+const STATUTS: Record<string, { label: string; variant: "success" | "neutral" | "warning" }> = {
+  en_cours: { label: "En cours", variant: "success" },
+  cloture: { label: "Clôturé", variant: "neutral" },
+  suspendu: { label: "Suspendu", variant: "warning" },
 };
+
+const formatEuro = (n: number | null | undefined) =>
+  n == null ? "—" : `${n.toLocaleString("fr-FR")} €`;
 
 export default function DossierDetailPage() {
   const { id } = useParams();
-  const router = useRouter();
+  const dossierId = String(id);
   const supabase = createClient();
   const [dossier, setDossier] = useState<Dossier | null>(null);
   const [objets, setObjets] = useState<Objet[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"infos" | "objets" | "courriers">("infos");
-  const [showAddObjet, setShowAddObjet] = useState(false);
-  const [disponibles, setDisponibles] = useState<Objet[]>([]);
-  const [selected, setSelected] = useState<string[]>([]);
 
-  useEffect(() => { loadData(); }, [id]);
+  const [rubriqueFilter, setRubriqueFilter] = useState<"all" | RubriqueValue>("all");
+  const [showCreateObjet, setShowCreateObjet] = useState(false);
+  const [showAddFromRepertoire, setShowAddFromRepertoire] = useState(false);
+  const [disponibles, setDisponibles] = useState<Objet[]>([]);
+  const [selectedRepertoire, setSelectedRepertoire] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dossierId]);
 
   const loadData = async () => {
     setLoading(true);
-    const { data: dossierData } = await supabase.from("dossiers").select("*").eq("id", id).single();
+    const { data: dossierData } = await supabase.from("dossiers").select("*").eq("id", dossierId).single();
     setDossier(dossierData);
-    const { data: objetsData } = await supabase.from("objets").select("*").eq("dossier_id", id);
+    const { data: objetsData } = await supabase
+      .from("objets")
+      .select("*")
+      .eq("dossier_id", dossierId)
+      .order("numero_repertoire", { ascending: true });
     setObjets(objetsData || []);
     setLoading(false);
   };
 
   const loadDisponibles = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: profile } = await supabase.from("profiles").select("organisation_id").eq("id", user.id).single();
-    if (!profile?.organisation_id) return;
-    const { data } = await supabase.from("objets").select("*")
-      .eq("organisation_id", profile.organisation_id)
+    if (!dossier) return;
+    const { data } = await supabase
+      .from("objets")
+      .select("*")
+      .eq("organisation_id", dossier.organisation_id)
       .is("dossier_id", null)
       .eq("status", "en_attente");
     setDisponibles(data || []);
   };
 
-  const handleAddObjets = async () => {
-    if (selected.length === 0) return;
-    await supabase.from("objets").update({ dossier_id: id, status: "attribue" }).in("id", selected);
+  const handleAddFromRepertoire = async () => {
+    if (selectedRepertoire.length === 0) return;
+    await supabase.from("objets").update({ dossier_id: dossierId, status: "attribue" }).in("id", selectedRepertoire);
     await loadData();
-    setShowAddObjet(false);
-    setSelected([]);
+    setShowAddFromRepertoire(false);
+    setSelectedRepertoire([]);
   };
 
-  if (loading) return <div style={{ padding: 32, color: "var(--muted)" }}>Chargement...</div>;
-  if (!dossier) return <div style={{ padding: 32, color: "var(--muted)" }}>Dossier introuvable</div>;
+  const counts = useMemo(() => {
+    const base: Record<string, number> = { all: objets.length };
+    for (const r of RUBRIQUES) base[r.value] = 0;
+    for (const o of objets) {
+      const k = o.rubrique || "_sans_";
+      base[k] = (base[k] || 0) + 1;
+    }
+    return base;
+  }, [objets]);
+
+  const filteredObjets = useMemo(() => {
+    if (rubriqueFilter === "all") return objets;
+    return objets.filter((o) => o.rubrique === rubriqueFilter);
+  }, [objets, rubriqueFilter]);
+
+  if (loading) return <div style={{ padding: 32, color: "var(--ink-2)" }}>Chargement…</div>;
+  if (!dossier) return <div style={{ padding: 32, color: "var(--ink-2)" }}>Dossier introuvable</div>;
 
   const statut = STATUTS[dossier.statut] || STATUTS.en_cours;
 
   return (
     <div className="fade-up">
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
-        <Link href="/dashboard/dossiers" style={{ fontSize: 13, color: "var(--muted)", textDecoration: "none" }}>← Dossiers</Link>
+        <Link href="/dashboard/dossiers" style={{ fontSize: "var(--text-base)", color: "var(--ink-2)", textDecoration: "none" }}>← Dossiers</Link>
         <span style={{ color: "var(--border-dark)" }}>·</span>
-        <span style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{dossier.numero}</span>
-        <span style={{ display: "inline-flex", padding: "3px 10px", borderRadius: 99, fontSize: 11, fontWeight: 600, background: statut.bg, color: statut.color }}>{statut.label}</span>
+        <span style={{ fontFamily: "monospace", fontSize: "var(--text-md)", fontWeight: 700, color: "var(--ink)" }}>{dossier.numero}</span>
+        <Badge variant={statut.variant} size="md">{statut.label}</Badge>
       </div>
 
       <div style={{ marginBottom: 28 }}>
-        <h1 className="serif" style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 4 }}>{dossier.debiteur_nom}</h1>
-        <p style={{ fontSize: 14, color: "var(--muted)" }}>{dossier.nature} · {dossier.debiteur_forme_juridique} · {dossier.debiteur_ville}</p>
+        <h1 className="serif" style={{ fontSize: "var(--text-2xl)", fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 4 }}>{dossier.debiteur_nom}</h1>
+        <p style={{ fontSize: "var(--text-md)", color: "var(--ink-2)" }}>
+          {[dossier.nature, dossier.debiteur_forme_juridique, dossier.debiteur_ville].filter(Boolean).join(" · ")}
+        </p>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: 0, borderBottom: "1px solid var(--border)", marginBottom: 24 }}>
-        {([["infos", "Informations"], ["objets", `Objets (${objets.length})`], ["courriers", "Courriers"]] as const).map(([tab, label]) => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
-            style={{ padding: "10px 20px", background: "none", border: "none", borderBottom: activeTab === tab ? "2px solid var(--black)" : "2px solid transparent", cursor: "pointer", fontSize: 14, fontWeight: activeTab === tab ? 600 : 400, color: activeTab === tab ? "var(--black)" : "var(--muted)", marginBottom: -1, fontFamily: "var(--font-sans)" }}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        items={[
+          { id: "infos", label: "Informations" },
+          { id: "objets", label: `Objets (${objets.length})` },
+          { id: "courriers", label: "Courriers" },
+        ] as const}
+        active={activeTab}
+        onChange={(t) => setActiveTab(t as "infos" | "objets" | "courriers")}
+        style={{ marginBottom: 24 }}
+      />
 
-      {/* Tab: Infos */}
       {activeTab === "infos" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
           {[
@@ -130,15 +167,15 @@ export default function DossierDetailPage() {
             { title: "Procédure judiciaire", fields: [["Nature", dossier.nature], ["Tribunal", dossier.tribunal], ["Juge commissaire", dossier.juge_commissaire], ["Administrateur", dossier.administrateur], ["Mandataire", dossier.mandataire], ["N° greffe", dossier.numero_greffe], ["Décret", dossier.decret], ["Date jugement", dossier.date_jugement ? new Date(dossier.date_jugement).toLocaleDateString("fr-FR") : ""]] },
             { title: "Dates", fields: [["Date d'ouverture", new Date(dossier.date_ouverture).toLocaleDateString("fr-FR")], ["Date de vente prévue", dossier.date_vente ? new Date(dossier.date_vente).toLocaleDateString("fr-FR") : "Non définie"]] },
             { title: "Intervenants", fields: [["Correspondant", dossier.correspondant], ["Email", dossier.correspondant_email], ["Signataire", dossier.signataire], ["Collaborateur", dossier.collaborateur]] },
-          ].map(section => (
+          ].map((section) => (
             <div key={section.title} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
               <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
-                <p style={{ fontSize: 13, fontWeight: 600 }}>{section.title}</p>
+                <p style={{ fontSize: "var(--text-base)", fontWeight: 600 }}>{section.title}</p>
               </div>
               <div style={{ padding: "8px 0" }}>
                 {section.fields.filter(([, v]) => v).map(([label, value]) => (
-                  <div key={label as string} style={{ display: "flex", justifyContent: "space-between", padding: "8px 20px", fontSize: 13 }}>
-                    <span style={{ color: "var(--muted)" }}>{label}</span>
+                  <div key={label as string} style={{ display: "flex", justifyContent: "space-between", padding: "8px 20px", fontSize: "var(--text-base)" }}>
+                    <span style={{ color: "var(--ink-2)" }}>{label}</span>
                     <span style={{ fontWeight: 500, color: "var(--ink)", textAlign: "right", maxWidth: 220 }}>{value}</span>
                   </div>
                 ))}
@@ -147,52 +184,97 @@ export default function DossierDetailPage() {
           ))}
           {dossier.commentaires && (
             <div style={{ gridColumn: "1 / -1", background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "16px 20px" }}>
-              <p style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Commentaires</p>
-              <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6 }}>{dossier.commentaires}</p>
+              <p style={{ fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--ink-2)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Commentaires</p>
+              <p style={{ fontSize: "var(--text-base)", color: "var(--ink)", lineHeight: 1.6 }}>{dossier.commentaires}</p>
             </div>
           )}
         </div>
       )}
 
-      {/* Tab: Objets */}
       {activeTab === "objets" && (
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <p style={{ fontSize: 14, color: "var(--muted)" }}>{objets.length} objet{objets.length > 1 ? "s" : ""} dans ce dossier</p>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => { loadDisponibles(); setShowAddObjet(true); }}
-                style={{ padding: "8px 16px", background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 13, cursor: "pointer" }}>
-                Ajouter depuis le répertoire
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <button
+                onClick={() => setRubriqueFilter("all")}
+                style={{
+                  padding: "5px 12px", borderRadius: 99, fontSize: "var(--text-sm)", fontWeight: 500,
+                  border: "1px solid", borderColor: rubriqueFilter === "all" ? "var(--black)" : "var(--border)",
+                  background: rubriqueFilter === "all" ? "var(--black)" : "transparent",
+                  color: rubriqueFilter === "all" ? "var(--white)" : "var(--ink-2)", cursor: "pointer",
+                }}
+              >
+                Tous <span style={{ opacity: 0.6 }}>({counts.all})</span>
               </button>
-              <Link href={`/dashboard/lots`}
-                style={{ padding: "8px 16px", background: "var(--black)", color: "white", borderRadius: "var(--radius)", fontSize: 13, textDecoration: "none", fontWeight: 500 }}>
-                + Nouvel objet
-              </Link>
+              {RUBRIQUES.map((r) => (
+                <button
+                  key={r.value}
+                  onClick={() => setRubriqueFilter(r.value)}
+                  style={{
+                    padding: "5px 12px", borderRadius: 99, fontSize: "var(--text-sm)", fontWeight: 500,
+                    border: "1px solid", borderColor: rubriqueFilter === r.value ? "var(--black)" : "var(--border)",
+                    background: rubriqueFilter === r.value ? "var(--black)" : "transparent",
+                    color: rubriqueFilter === r.value ? "var(--white)" : "var(--ink-2)", cursor: "pointer",
+                  }}
+                >
+                  {r.label} <span style={{ opacity: 0.6 }}>({counts[r.value] || 0})</span>
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button variant="secondary" size="sm" onClick={() => { loadDisponibles(); setShowAddFromRepertoire(true); }}>
+                Depuis le répertoire
+              </Button>
+              <Button variant="primary" size="sm" onClick={() => setShowCreateObjet(true)}>
+                + Ajouter un objet
+              </Button>
             </div>
           </div>
 
           <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-            {objets.length === 0 ? (
-              <div style={{ padding: "48px 24px", textAlign: "center", color: "var(--muted)", fontSize: 14 }}>
-                Aucun objet dans ce dossier. Ajoutez des objets depuis le répertoire.
-              </div>
+            {filteredObjets.length === 0 ? (
+              <EmptyState
+                title={objets.length === 0 ? "Aucun objet dans ce dossier" : "Aucun objet dans cette rubrique"}
+                description={objets.length === 0 ? "Inventorier les objets par rubrique (matériel, mobilier, véhicule…) ou importer un inventaire PDF déjà rédigé." : undefined}
+                action={objets.length === 0 ? <Button variant="primary" size="md" onClick={() => setShowCreateObjet(true)}>Ajouter manuellement</Button> : undefined}
+                secondaryAction={objets.length === 0 ? <Button variant="secondary" size="md" disabled title="Bientôt disponible">Importer un inventaire (PDF)</Button> : undefined}
+              />
             ) : (
               <>
-                <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", display: "grid", gridTemplateColumns: "100px 1fr 140px 160px 100px", gap: 12 }}>
-                  {["N° Rép.", "Objet", "Technique", "Estimation", "Statut"].map(h => (
-                    <p key={h} style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted)" }}>{h}</p>
+                <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", display: "grid", gridTemplateColumns: "60px 80px 1fr 120px 80px 100px 100px 120px", gap: 12, alignItems: "center" }}>
+                  {["Photo", "N°", "Description", "Rubrique", "État", "Val. expl.", "Val. reprise", "Estimation"].map((h) => (
+                    <p key={h} style={{ fontSize: "var(--text-xs)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--ink-2)" }}>{h}</p>
                   ))}
                 </div>
-                {objets.map((objet, i) => (
-                  <div key={objet.id} style={{ padding: "14px 20px", borderBottom: i < objets.length - 1 ? "1px solid var(--border)" : "none", display: "grid", gridTemplateColumns: "100px 1fr 140px 160px 100px", gap: 12, alignItems: "center" }}>
-                    <span style={{ fontFamily: "monospace", fontSize: 12, color: "var(--muted)", fontWeight: 600 }}>{objet.numero_repertoire}</span>
+                {filteredObjets.map((objet, i) => (
+                  <div key={objet.id} style={{ padding: "10px 20px", borderBottom: i < filteredObjets.length - 1 ? "1px solid var(--border)" : "none", display: "grid", gridTemplateColumns: "60px 80px 1fr 120px 80px 100px 100px 120px", gap: 12, alignItems: "center" }}>
+                    {objet.photo_url ? (
+                      <img src={objet.photo_url} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: "var(--radius)", border: "1px solid var(--border)" }} />
+                    ) : (
+                      <div style={{ width: 44, height: 44, borderRadius: "var(--radius)", background: "var(--cream)", border: "1px solid var(--border)" }} />
+                    )}
+                    <span style={{ fontFamily: "monospace", fontSize: "var(--text-sm)", color: "var(--ink-2)", fontWeight: 600 }}>{objet.numero_repertoire}</span>
                     <div>
-                      <p style={{ fontSize: 14, fontWeight: 500, color: "var(--black)" }}>{objet.titre}</p>
-                      {objet.artiste && <p style={{ fontSize: 12, color: "var(--muted)" }}>{objet.artiste}</p>}
+                      <p style={{ fontSize: "var(--text-md)", fontWeight: 500, color: "var(--ink)", lineHeight: 1.3 }}>
+                        {objet.description || objet.titre || "—"}
+                      </p>
+                      {objet.artiste && <p style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>{objet.artiste}</p>}
                     </div>
-                    <p style={{ fontSize: 12, color: "var(--muted)" }}>{objet.technique || "—"}</p>
-                    <p style={{ fontSize: 12, fontFamily: "var(--font-serif)", color: "var(--ink)" }}>{objet.estimation_basse?.toLocaleString()} – {objet.estimation_haute?.toLocaleString()} €</p>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--success)" }}>Attribué</span>
+                    <span>
+                      {objet.rubrique ? (
+                        <Badge variant="neutral" size="sm">{RUBRIQUE_LABELS[objet.rubrique] || objet.rubrique}</Badge>
+                      ) : (
+                        <span style={{ fontSize: "var(--text-sm)", color: "var(--ink-3)" }}>—</span>
+                      )}
+                    </span>
+                    <span style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>{objet.etat || "—"}</span>
+                    <span style={{ fontSize: "var(--text-sm)", color: "var(--ink)", textAlign: "right" }}>{formatEuro(objet.valeur_exploitation)}</span>
+                    <span style={{ fontSize: "var(--text-sm)", color: "var(--ink)", textAlign: "right" }}>{formatEuro(objet.valeur_reprise)}</span>
+                    <span style={{ fontSize: "var(--text-sm)", fontFamily: "var(--font-serif)", color: "var(--ink)", textAlign: "right" }}>
+                      {objet.estimation_basse || objet.estimation_haute
+                        ? `${(objet.estimation_basse || 0).toLocaleString("fr-FR")} – ${(objet.estimation_haute || 0).toLocaleString("fr-FR")} €`
+                        : "—"}
+                    </span>
                   </div>
                 ))}
               </>
@@ -201,52 +283,64 @@ export default function DossierDetailPage() {
         </div>
       )}
 
-      {/* Tab: Courriers */}
       {activeTab === "courriers" && (
         <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "48px 24px", textAlign: "center" }}>
-          <p className="serif" style={{ fontSize: 20, fontWeight: 500, marginBottom: 8 }}>Courriers automatiques</p>
-          <p style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24 }}>Génération automatique des courriers types — ordonnance, demande d'évaluation, note d'honoraires, envoi inventaire.</p>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(139,111,71,0.1)", border: "1px solid rgba(139,111,71,0.2)", borderRadius: 99, padding: "5px 14px" }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", letterSpacing: "0.04em" }}>EN DÉVELOPPEMENT</span>
-          </div>
+          <p className="serif" style={{ fontSize: "var(--text-xl)", fontWeight: 500, marginBottom: 8 }}>Courriers automatiques</p>
+          <p style={{ fontSize: "var(--text-md)", color: "var(--ink-2)", marginBottom: 24 }}>
+            Génération automatique des courriers types — ordonnance, demande d&apos;évaluation, note d&apos;honoraires, envoi inventaire.
+          </p>
+          <Badge variant="accent" size="md">En développement</Badge>
         </div>
       )}
 
-      {/* Modal: Ajouter objets */}
-      {showAddObjet && (
-        <div onClick={() => setShowAddObjet(false)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 24 }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ background: "var(--white)", borderRadius: "var(--radius-lg)", width: "100%", maxWidth: 600, maxHeight: "80vh", display: "flex", flexDirection: "column", boxShadow: "var(--shadow-lg)" }}>
-            <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h2 className="serif" style={{ fontSize: 20, fontWeight: 500 }}>Ajouter depuis le répertoire</h2>
-              <button onClick={() => setShowAddObjet(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)", fontSize: 20 }}>×</button>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
-              {disponibles.length === 0 ? (
-                <p style={{ fontSize: 14, color: "var(--muted)", textAlign: "center", padding: "24px 0" }}>Aucun objet disponible dans le répertoire.</p>
-              ) : disponibles.map((objet, i) => (
-                <div key={objet.id} onClick={() => setSelected(s => s.includes(objet.id) ? s.filter(x => x !== objet.id) : [...s, objet.id])}
-                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: i < disponibles.length - 1 ? "1px solid var(--border)" : "none", cursor: "pointer" }}>
-                  <input type="checkbox" checked={selected.includes(objet.id)} readOnly style={{ width: 16, height: 16 }} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 14, fontWeight: 500, color: "var(--black)" }}>{objet.titre}</p>
-                    <p style={{ fontSize: 12, color: "var(--muted)" }}>{objet.numero_repertoire} · {objet.technique || "—"}</p>
-                  </div>
-                  <p style={{ fontSize: 12, color: "var(--muted)" }}>{objet.estimation_basse?.toLocaleString()} – {objet.estimation_haute?.toLocaleString()} €</p>
+      {showCreateObjet && (
+        <ObjetJudiciaireForm
+          dossierId={dossierId}
+          organisationId={dossier.organisation_id}
+          defaultRubrique={rubriqueFilter === "all" ? "materiel" : (rubriqueFilter as RubriqueValue)}
+          onClose={() => setShowCreateObjet(false)}
+          onCreated={loadData}
+        />
+      )}
+
+      {showAddFromRepertoire && (
+        <Modal
+          title="Ajouter depuis le répertoire"
+          subtitle={`${disponibles.length} objet${disponibles.length > 1 ? "s" : ""} disponible${disponibles.length > 1 ? "s" : ""}`}
+          onClose={() => setShowAddFromRepertoire(false)}
+          onConfirm={handleAddFromRepertoire}
+          confirmLabel={`Ajouter${selectedRepertoire.length > 0 ? ` (${selectedRepertoire.length})` : ""}`}
+          confirmDisabled={selectedRepertoire.length === 0}
+          size="md"
+        >
+          {disponibles.length === 0 ? (
+            <p style={{ fontSize: "var(--text-md)", color: "var(--ink-2)", textAlign: "center", padding: "24px 0" }}>
+              Aucun objet disponible dans le répertoire.
+            </p>
+          ) : (
+            disponibles.map((objet, i) => (
+              <div
+                key={objet.id}
+                onClick={() => setSelectedRepertoire((s) => (s.includes(objet.id) ? s.filter((x) => x !== objet.id) : [...s, objet.id]))}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "12px 0",
+                  borderBottom: i < disponibles.length - 1 ? "1px solid var(--border)" : "none",
+                  cursor: "pointer",
+                }}
+              >
+                <input type="checkbox" checked={selectedRepertoire.includes(objet.id)} readOnly style={{ width: 16, height: 16 }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: "var(--text-md)", fontWeight: 500, color: "var(--ink)" }}>{objet.titre || objet.description || "—"}</p>
+                  <p style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>{objet.numero_repertoire} · {objet.technique || "—"}</p>
                 </div>
-              ))}
-            </div>
-            <div style={{ padding: "16px 24px", borderTop: "1px solid var(--border)", display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={() => setShowAddObjet(false)} style={{ padding: "9px 18px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 13, cursor: "pointer" }}>Annuler</button>
-              <button onClick={handleAddObjets} disabled={selected.length === 0}
-                style={{ padding: "9px 18px", background: selected.length === 0 ? "var(--cream)" : "var(--black)", color: selected.length === 0 ? "var(--muted)" : "white", border: "none", borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500, cursor: selected.length === 0 ? "not-allowed" : "pointer" }}>
-                Ajouter {selected.length > 0 ? `(${selected.length})` : ""} objet{selected.length > 1 ? "s" : ""}
-              </button>
-            </div>
-          </div>
-        </div>
+                <p style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
+                  {(objet.estimation_basse || 0).toLocaleString("fr-FR")} – {(objet.estimation_haute || 0).toLocaleString("fr-FR")} €
+                </p>
+              </div>
+            ))
+          )}
+        </Modal>
       )}
     </div>
   );
