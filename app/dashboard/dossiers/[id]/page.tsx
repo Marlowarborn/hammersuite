@@ -9,6 +9,7 @@ import ObjetJudiciaireForm, { RUBRIQUES, RUBRIQUE_LABELS, RubriqueValue } from "
 import DossierForm, { dossierToForm, DossierFormValues } from "@/components/app/DossierForm";
 import ContratsSection from "@/components/app/ContratsSection";
 import LieuxSection from "@/components/app/LieuxSection";
+import CourriersTab from "@/components/app/CourriersTab";
 import PhaseChecklistDrawer, { ChecklistItem, ensureChecklist } from "@/components/app/PhaseChecklistDrawer";
 import { getPhases, PHASES_JUDICIAIRE } from "@/lib/checklists";
 
@@ -458,15 +459,7 @@ export default function DossierDetailPage() {
         </div>
       )}
 
-      {activeTab === "courriers" && (
-        <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "48px 24px", textAlign: "center" }}>
-          <p className="serif" style={{ fontSize: "var(--text-xl)", fontWeight: 500, marginBottom: 8 }}>Courriers automatiques</p>
-          <p style={{ fontSize: "var(--text-md)", color: "var(--ink-2)", marginBottom: 24 }}>
-            Génération automatique des courriers types — ordonnance, demande d&apos;évaluation, note d&apos;honoraires, envoi inventaire.
-          </p>
-          <Badge variant="accent" size="md">En développement</Badge>
-        </div>
-      )}
+      {activeTab === "courriers" && <CourriersTab dossierId={dossierId} />}
 
       {showCreateObjet && (
         <ObjetJudiciaireForm
