@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Marto.io — The modern operating system for auction houses",
+  title: "Marto.io, le système d’exploitation moderne des maisons de vente",
   description:
-    "Manage sales, lots, catalogues, and client workflows in one refined operating system. Designed for commissaires-priseurs.",
+    "Gérez vos ventes, vos lots, vos catalogues et vos échanges clients dans un seul outil pensé pour votre étude. Conçu pour les commissaires-priseurs.",
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <body>{children}</body>
     </html>
   );

@@ -2,10 +2,10 @@ import { MOCK_SALES, MOCK_ACTIVITY } from "@/data/mock";
 
 export default function DashboardPage() {
   const stats = [
-    { label: "Active Sales", value: "5", sub: "+2 this month" },
-    { label: "Total Lots", value: "503", sub: "84 pending catalogue" },
-    { label: "Est. GMV", value: "€2.3M", sub: "Current calendar" },
-    { label: "Catalogues", value: "3", sub: "1 in progress" },
+    { label: "Ventes actives", value: "5", sub: "+2 ce mois-ci" },
+    { label: "Total des lots", value: "503", sub: "84 à cataloguer" },
+    { label: "GMV estimée", value: "€2.3M", sub: "Calendrier en cours" },
+    { label: "Catalogues", value: "3", sub: "1 en cours" },
   ];
   const typeColors: Record<string, string> = {
     sale: "var(--accent)",
@@ -16,10 +16,10 @@ export default function DashboardPage() {
     <div className="fade-up">
       <div style={{ marginBottom: 32 }}>
         <h1 className="serif" style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 4 }}>
-          Good morning, Diane.
+          Bonjour Diane.
         </h1>
         <p style={{ fontSize: 14, color: "var(--muted)" }}>
-          Here is what is happening at Maison Durand et Associes.
+          Voici l’actualité de la Maison Durand et Associés.
         </p>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
@@ -38,8 +38,8 @@ export default function DashboardPage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24 }}>
         <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
           <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h2 style={{ fontSize: 14, fontWeight: 600 }}>Upcoming Sales</h2>
-            <a href="/dashboard/sales" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>View all</a>
+            <h2 style={{ fontSize: 14, fontWeight: 600 }}>Ventes à venir</h2>
+            <a href="/dashboard/sales" style={{ fontSize: 12, color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>Tout voir</a>
           </div>
           <div>
             {MOCK_SALES.filter((s) => s.status !== "completed").map((sale, i) => (
@@ -59,7 +59,7 @@ export default function DashboardPage() {
         </div>
         <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
           <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--border)" }}>
-            <h2 style={{ fontSize: 14, fontWeight: 600 }}>Recent Activity</h2>
+            <h2 style={{ fontSize: 14, fontWeight: 600 }}>Activité récente</h2>
           </div>
           <div style={{ padding: "8px 0" }}>
             {MOCK_ACTIVITY.map((a) => (

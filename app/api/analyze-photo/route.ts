@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("photo") as File;
-    if (!file) return NextResponse.json({ error: "No photo provided" }, { status: 400 });
+    if (!file) return NextResponse.json({ error: "Aucune photo transmise" }, { status: 400 });
 
     const bytes = await file.arrayBuffer();
     const base64 = Buffer.from(bytes).toString("base64");

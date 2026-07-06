@@ -5,12 +5,12 @@ export default function CRMPage() {
     <div className="fade-up">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
         <div>
-          <h1 className="serif" style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 4 }}>Client CRM</h1>
-          <p style={{ fontSize: 14, color: "var(--muted)" }}>{MOCK_CLIENTS.length} clients · Full module in development</p>
+          <h1 className="serif" style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 4 }}>CRM clients</h1>
+          <p style={{ fontSize: 14, color: "var(--muted)" }}>{MOCK_CLIENTS.length} clients · Module complet en développement</p>
         </div>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(139,111,71,0.1)", border: "1px solid rgba(139,111,71,0.2)", borderRadius: 99, padding: "5px 14px" }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", letterSpacing: "0.04em" }}>IN DEVELOPMENT</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", letterSpacing: "0.04em" }}>EN DÉVELOPPEMENT</span>
         </div>
       </div>
       <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", marginBottom: 20 }}>
@@ -32,7 +32,7 @@ export default function CRMPage() {
         ))}
       </div>
       <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "20px 24px" }}>
-        <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.65 }}>Full CRM functionality — rich client profiles, consignment history, buying preferences, and correspondence logs — is available in early access for Maison and Institution plan clients.</p>
+        <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.65 }}>Le CRM complet, avec fiches clients détaillées, historique des consignations, préférences d’achat et suivi des correspondances, est disponible en accès anticipé pour les offres Maison et Institution.</p>
       </div>
     </div>
   );

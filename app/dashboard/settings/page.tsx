@@ -1,11 +1,11 @@
 export default function SettingsPage() {
   const groups = [
-    { section: "Auction House", fields: [{ label: "House name", value: "Maison Durand et Associes" }, { label: "Licence number", value: "SVV-2019-0847" }, { label: "Primary city", value: "Paris" }] },
-    { section: "Account", fields: [{ label: "Full name", value: "Diane Aumont" }, { label: "Email", value: "d.aumont@maison-durand.fr" }, { label: "Role", value: "Commissaire-priseur" }] },
+    { section: "Maison de vente", fields: [{ label: "Nom de l’étude", value: "Maison Durand et Associés" }, { label: "Numéro d’agrément", value: "SVV-2019-0847" }, { label: "Ville principale", value: "Paris" }] },
+    { section: "Compte", fields: [{ label: "Nom complet", value: "Diane Aumont" }, { label: "Email", value: "d.aumont@maison-durand.fr" }, { label: "Fonction", value: "Commissaire-priseur" }] },
   ];
   return (
     <div className="fade-up" style={{ maxWidth: 640 }}>
-      <h1 className="serif" style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 28 }}>Settings</h1>
+      <h1 className="serif" style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 28 }}>Paramètres</h1>
       {groups.map(group => (
         <div key={group.section} style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", marginBottom: 20, overflow: "hidden" }}>
           <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
@@ -19,7 +19,7 @@ export default function SettingsPage() {
           ))}
         </div>
       ))}
-      <button style={{ padding: "10px 24px", background: "var(--black)", color: "white", border: "none", borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Save changes</button>
+      <button style={{ padding: "10px 24px", background: "var(--black)", color: "white", border: "none", borderRadius: "var(--radius)", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Enregistrer les modifications</button>
     </div>
   );
 }

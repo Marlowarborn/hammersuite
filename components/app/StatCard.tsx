@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   {
     id: "dashboard",
-    label: "Dashboard",
+    label: "Tableau de bord",
     href: "/dashboard",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -20,7 +20,7 @@ const NAV_ITEMS = [
   },
   {
     id: "sales",
-    label: "Sales",
+    label: "Ventes",
     href: "/dashboard/sales",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -31,7 +31,7 @@ const NAV_ITEMS = [
   },
   {
     id: "lots",
-    label: "Lots",
+    label: "Répertoire",
     href: "/dashboard/lots",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -41,7 +41,7 @@ const NAV_ITEMS = [
   },
   {
     id: "catalogue",
-    label: "Catalogue",
+    label: "Catalogues",
     href: "/dashboard/catalogue",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -52,7 +52,7 @@ const NAV_ITEMS = [
   },
   {
     id: "crm",
-    label: "CRM",
+    label: "Clients",
     href: "/dashboard/crm",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -65,7 +65,7 @@ const NAV_ITEMS = [
   },
   {
     id: "estimates",
-    label: "Estimates",
+    label: "Estimations",
     href: "/dashboard/estimates",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -76,7 +76,7 @@ const NAV_ITEMS = [
   },
   {
     id: "analytics",
-    label: "Analytics",
+    label: "Analytiques",
     href: "/dashboard/analytics",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -86,7 +86,7 @@ const NAV_ITEMS = [
   },
   {
     id: "settings",
-    label: "Settings",
+    label: "Paramètres",
     href: "/dashboard/settings",
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -274,7 +274,7 @@ export default function Sidebar() {
               </>
             )}
           </svg>
-          {!collapsed && <span>Collapse</span>}
+          {!collapsed && <span>Réduire</span>}
         </button>
       </div>
     </aside>

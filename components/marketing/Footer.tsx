@@ -72,39 +72,39 @@ export default function Footer() {
                 maxWidth: 280,
               }}
             >
-              The modern operating system for auction houses. Built for
-              commissaires-priseurs who demand precision.
+              Le système d’exploitation moderne des maisons de vente. Conçu pour
+              les commissaires-priseurs qui exigent de la précision.
             </p>
           </div>
 
           {/* Link columns */}
           {[
             {
-              title: "Product",
+              title: "Produit",
               links: [
-                { label: "Catalogue Generator", href: "/dashboard/catalogue" },
-                { label: "Sales Management", href: "/dashboard/sales" },
-                { label: "Lot Management", href: "/dashboard/lots" },
-                { label: "Client CRM", href: "/dashboard/crm" },
-                { label: "Analytics", href: "/dashboard/analytics" },
+                { label: "Générateur de catalogue", href: "/dashboard/catalogue" },
+                { label: "Gestion des ventes", href: "/dashboard/sales" },
+                { label: "Gestion des lots", href: "/dashboard/lots" },
+                { label: "CRM clients", href: "/dashboard/crm" },
+                { label: "Analytiques", href: "/dashboard/analytics" },
               ],
             },
             {
-              title: "Company",
+              title: "Entreprise",
               links: [
-                { label: "About", href: "/" },
-                { label: "Customer Stories", href: "/" },
-                { label: "Security", href: "/" },
+                { label: "À propos", href: "/" },
+                { label: "Témoignages clients", href: "/" },
+                { label: "Sécurité", href: "/" },
                 { label: "Contact", href: "/" },
               ],
             },
             {
-              title: "Legal",
+              title: "Mentions légales",
               links: [
-                { label: "Terms of Service", href: "/" },
-                { label: "Privacy Policy", href: "/" },
-                { label: "Help Centre", href: "/" },
-                { label: "Book a Demo", href: "/pricing" },
+                { label: "Conditions générales", href: "/" },
+                { label: "Politique de confidentialité", href: "/" },
+                { label: "Centre d’aide", href: "/" },
+                { label: "Demander une démo", href: "/pricing" },
               ],
             },
           ].map((col) => (
@@ -158,7 +158,7 @@ export default function Footer() {
           }}
         >
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>
-            © 2026 Marto.io. All rights reserved.
+            © 2026 Marto.io. Tous droits réservés.
           </p>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>
             Paris · Lyon · Bordeaux

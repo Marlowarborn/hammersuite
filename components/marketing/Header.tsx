@@ -13,7 +13,7 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  const navLinks = ["Product", "Solutions", "Pricing", "Company"];
+  const navLinks = ["Produit", "Solutions", "Tarifs", "Entreprise"];
 
   return (
     <header
@@ -94,7 +94,7 @@ export default function Header() {
           {navLinks.map((link) => (
             <Link
               key={link}
-              href={link === "Pricing" ? "/pricing" : "/"}
+              href={link === "Tarifs" ? "/pricing" : "/"}
               style={{
                 padding: "6px 14px",
                 borderRadius: "var(--radius)",
@@ -131,7 +131,7 @@ export default function Header() {
               textDecoration: "none",
             }}
           >
-            Sign in
+            Se connecter
           </Link>
           <Link
             href="/pricing"
@@ -148,7 +148,7 @@ export default function Header() {
             onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
           >
-            Book a demo
+            Demander une démo
           </Link>
 
           {/* Mobile menu button */}
@@ -202,7 +202,7 @@ export default function Header() {
           {navLinks.map((link) => (
             <Link
               key={link}
-              href={link === "Pricing" ? "/pricing" : "/"}
+              href={link === "Tarifs" ? "/pricing" : "/"}
               onClick={() => setMobileOpen(false)}
               style={{
                 display: "block",
@@ -233,7 +233,7 @@ export default function Header() {
               textDecoration: "none",
             }}
           >
-            Sign in
+            Se connecter
           </Link>
         </div>
       )}

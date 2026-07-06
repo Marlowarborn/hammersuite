@@ -66,11 +66,11 @@ export async function POST(req: NextRequest) {
       }
 
       if (status === "error") {
-        return NextResponse.json({ error: "PDF generation failed" }, { status: 500 });
+        return NextResponse.json({ error: "Échec de la génération du PDF" }, { status: 500 });
       }
     }
 
-    return NextResponse.json({ error: "Timeout — PDF took too long" }, { status: 500 });
+    return NextResponse.json({ error: "Délai dépassé, le PDF a mis trop de temps" }, { status: 500 });
 
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
