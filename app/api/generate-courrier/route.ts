@@ -133,7 +133,8 @@ export async function POST(req: NextRequest) {
       break;
     }
     if (status === "failure" || status === "error") {
-      return err(`PDFMonkey: génération échouée (${status})`, 502);
+      const cause = polled?.document?.failure_cause || "cause inconnue";
+      return err(`PDFMonkey: génération échouée (${status}) — ${cause}`, 502);
     }
   }
 
