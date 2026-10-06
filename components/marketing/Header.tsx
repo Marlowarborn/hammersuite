@@ -13,7 +13,7 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  const navLinks = ["Produit", "Solutions", "Tarifs", "Entreprise"];
+  const navLinks = ["Modules", "Pilotes"];
 
   return (
     <header
@@ -94,7 +94,7 @@ export default function Header() {
           {navLinks.map((link) => (
             <Link
               key={link}
-              href={link === "Tarifs" ? "/pricing" : "/"}
+              href={link === "Pilotes" ? "/pricing" : "/"}
               style={{
                 padding: "6px 14px",
                 borderRadius: "var(--radius)",
@@ -202,7 +202,7 @@ export default function Header() {
           {navLinks.map((link) => (
             <Link
               key={link}
-              href={link === "Tarifs" ? "/pricing" : "/"}
+              href={link === "Pilotes" ? "/pricing" : "/"}
               onClick={() => setMobileOpen(false)}
               style={{
                 display: "block",
