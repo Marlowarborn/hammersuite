@@ -143,6 +143,25 @@ export async function POST(req: NextRequest) {
 
   if (!pdfUrl) return err("Génération du courrier trop longue, réessayez", 504);
 
+  // Archivage : le PDF est copié dans le stockage de l'étude. L'URL PDFMonkey expire,
+  // le fichier archivé fait foi (notes d'honoraires comprises).
+  let pdfPath: string | null = null;
+  try {
+    const pdfRes = await fetch(pdfUrl);
+    if (pdfRes.ok) {
+      const bytes = Buffer.from(await pdfRes.arrayBuffer());
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const candidate = `${dossier.organisation_id}/${dossier_id}/${type}-${stamp}.pdf`;
+      const { error: uploadErr } = await supabase.storage
+        .from("courriers")
+        .upload(candidate, bytes, { contentType: "application/pdf", upsert: false });
+      if (uploadErr) console.error("[generate-courrier] archivage", uploadErr.message);
+      else pdfPath = candidate;
+    }
+  } catch (e) {
+    console.error("[generate-courrier] archivage", e);
+  }
+
   const { data: courrier, error: insertErr } = await supabase
     .from("courriers")
     .insert({
@@ -153,6 +172,7 @@ export async function POST(req: NextRequest) {
       destinataire: destinataire || null,
       reference: numeroFacture,
       pdf_url: pdfUrl,
+      pdf_path: pdfPath,
       pdfmonkey_doc_id: docId,
       status: "generated",
       generated_at: new Date().toISOString(),

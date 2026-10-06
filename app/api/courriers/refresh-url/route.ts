@@ -18,12 +18,24 @@ export async function POST(req: NextRequest) {
 
   const { data: courrier } = await supabase
     .from("courriers")
-    .select("id, pdfmonkey_doc_id, organisation_id, pdf_url")
+    .select("id, pdfmonkey_doc_id, organisation_id, pdf_url, pdf_path")
     .eq("id", body.courrier_id)
     .eq("organisation_id", session.profile.organisation_id)
     .single();
 
   if (!courrier) return err("Courrier introuvable", 404);
+
+  // Archive dans le stockage de l'étude : lien signé valable une heure, créé à la demande.
+  if (courrier.pdf_path) {
+    const { data: signed, error: signErr } = await supabase.storage
+      .from("courriers")
+      .createSignedUrl(courrier.pdf_path, 60 * 60);
+    if (!signErr && signed?.signedUrl) {
+      return NextResponse.json({ url: signed.signedUrl, source: "archive" });
+    }
+    console.error("[refresh-url] lien signé", signErr?.message);
+  }
+
   if (!courrier.pdfmonkey_doc_id) {
     return NextResponse.json({ url: courrier.pdf_url });
   }
