@@ -43,7 +43,6 @@ export default function SalesPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", date: "", location: "", category: "", notes: "" });
 
-  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -53,9 +52,14 @@ export default function SalesPage() {
     if (!profile?.organisation_id) return;
     setOrgId(profile.organisation_id);
     const { data } = await supabase.from("ventes").select("*").eq("organisation_id", profile.organisation_id).order("created_at", { ascending: false });
-    setSales((data || []).map((v: any) => ({ ...v, lots: v.lots || 0, estimate: v.estimate || "—" })));
+    setSales((data || []).map((v: Sale) => ({ ...v, lots: v.lots || 0, estimate: v.estimate || "—" })));
     setLoading(false);
   };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCreate = async () => {
     if (!form.name || !form.date || !orgId) return;
@@ -136,7 +140,7 @@ export default function SalesPage() {
               <div key={field.key} style={{ marginBottom: 16 }}>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{field.label}</label>
                 <input type={field.type} placeholder={field.placeholder}
-                  value={(form as any)[field.key]}
+                  value={form[field.key as keyof typeof form]}
                   onChange={e => setForm({ ...form, [field.key]: e.target.value })}
                   style={{ width: "100%", padding: "9px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)" }} />
               </div>

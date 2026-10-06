@@ -148,7 +148,7 @@ export default function Header() {
             onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
           >
-            Demander une démo
+            Programme pilote
           </Link>
 
           {/* Mobile menu button */}

@@ -243,7 +243,7 @@ export default function SaisiePage() {
             <div key={field.key} style={{ marginBottom: 16 }}>
               <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{field.label}</label>
               <input type="text" placeholder={field.placeholder}
-                value={(form as any)[field.key]}
+                value={form[field.key as keyof typeof form]}
                 onChange={e => setForm({ ...form, [field.key]: e.target.value })}
                 style={{ width: "100%", padding: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 15, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)", background: "var(--white)" }} />
             </div>
@@ -257,7 +257,7 @@ export default function SaisiePage() {
               <div key={field.key}>
                 <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{field.label}</label>
                 <input type="number" placeholder="0"
-                  value={(form as any)[field.key]}
+                  value={form[field.key as keyof typeof form]}
                   onChange={e => setForm({ ...form, [field.key]: e.target.value })}
                   style={{ width: "100%", padding: "12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 15, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)", background: "var(--white)" }} />
               </div>

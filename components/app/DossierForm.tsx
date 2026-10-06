@@ -293,7 +293,7 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <Section title="Identification">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Input label="N° Dossier *" value={form.numero} onChange={(e) => f("numero", e.target.value)} placeholder="ex. TC21136" />
+            <Input label="N° Dossier *" value={form.numero} onChange={(e) => f("numero", e.target.value)} placeholder="Numéro interne du dossier" />
             <Select label="Nature *" value={form.nature} onChange={(e) => f("nature", e.target.value)} options={NATURES.map((n) => ({ value: n, label: n }))} />
             <Input label="Date d'ouverture" type="date" value={form.date_ouverture} onChange={(e) => f("date_ouverture", e.target.value)} />
             <Input label="Date de vente prévue" type="date" value={form.date_vente} onChange={(e) => f("date_vente", e.target.value)} />
@@ -303,9 +303,9 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
         <Section title="Débiteur / Vendeur">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ gridColumn: "1 / -1" }}>
-              <Input label="Nom / Raison sociale *" value={form.debiteur_nom} onChange={(e) => f("debiteur_nom", e.target.value)} placeholder="ex. LA PETITE GROSSE" />
+              <Input label="Nom / Raison sociale *" value={form.debiteur_nom} onChange={(e) => f("debiteur_nom", e.target.value)} placeholder="Raison sociale ou nom du débiteur" />
             </div>
-            <Input label="Forme juridique" value={form.debiteur_forme_juridique} onChange={(e) => f("debiteur_forme_juridique", e.target.value)} placeholder="ex. SARL" />
+            <Input label="Forme juridique" value={form.debiteur_forme_juridique} onChange={(e) => f("debiteur_forme_juridique", e.target.value)} placeholder="SARL, SAS, EI…" />
             <Input label="Adresse" value={form.debiteur_adresse} onChange={(e) => f("debiteur_adresse", e.target.value)} />
             <Input label="Code postal" value={form.debiteur_code_postal} onChange={(e) => f("debiteur_code_postal", e.target.value)} />
             <Input label="Ville" value={form.debiteur_ville} onChange={(e) => f("debiteur_ville", e.target.value)} />
@@ -315,11 +315,11 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
         <Section title="Procédure judiciaire">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Input label="Tribunal" value={form.tribunal} onChange={(e) => f("tribunal", e.target.value)} />
-            <Input label="N° greffe" value={form.numero_greffe} onChange={(e) => f("numero_greffe", e.target.value)} placeholder="ex. P202400429" />
+            <Input label="N° greffe" value={form.numero_greffe} onChange={(e) => f("numero_greffe", e.target.value)} placeholder="Numéro de la procédure au greffe" />
             <Input label="Date jugement" type="date" value={form.date_jugement} onChange={(e) => f("date_jugement", e.target.value)} />
-            <Input label="ID Securigreffe" value={form.securigreffe_id} onChange={(e) => f("securigreffe_id", e.target.value)} placeholder="référence du suivi" />
+            <Input label="ID Securigreffe" value={form.securigreffe_id} onChange={(e) => f("securigreffe_id", e.target.value)} placeholder="Identifiant Securigreffe" />
             <div style={{ gridColumn: "1 / -1" }}>
-              <Input label="Décret" value={form.decret} onChange={(e) => f("decret", e.target.value)} placeholder="ex. Arrêté du 28/02/2020" />
+              <Input label="Décret" value={form.decret} onChange={(e) => f("decret", e.target.value)} placeholder="Référence de l’arrêté tarifaire" />
             </div>
           </div>
         </Section>
@@ -341,7 +341,7 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
         <Section title="Gérant / Représentant">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Input label="Nom du gérant" value={form.gerant_nom} onChange={(e) => f("gerant_nom", e.target.value)} />
-            <Input label="Téléphone" value={form.gerant_telephone} onChange={(e) => f("gerant_telephone", e.target.value)} placeholder="06 12 34 56 78" />
+            <Input label="Téléphone" value={form.gerant_telephone} onChange={(e) => f("gerant_telephone", e.target.value)} placeholder="06 00 00 00 00" />
             <Input label="Email" type="email" value={form.gerant_email} onChange={(e) => f("gerant_email", e.target.value)} />
             <Input label="Adresse" value={form.gerant_adresse} onChange={(e) => f("gerant_adresse", e.target.value)} />
           </div>
@@ -356,14 +356,14 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
             />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <Input label="Conseil" value={form.conseil_nom} onChange={(e) => f("conseil_nom", e.target.value)} placeholder="Avocat, expert-comptable…" />
-              <Input label="Autres membres" value={form.autres_membres} onChange={(e) => f("autres_membres", e.target.value)} placeholder="associés, etc." />
+              <Input label="Autres membres" value={form.autres_membres} onChange={(e) => f("autres_membres", e.target.value)} placeholder="Autres personnes à informer" />
             </div>
           </div>
         </Section>
 
         <Section title="Correspondants étude">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <Input label="Correspondant" value={form.correspondant} onChange={(e) => f("correspondant", e.target.value)} placeholder="ex. Me. Julie PERROT" />
+            <Input label="Correspondant" value={form.correspondant} onChange={(e) => f("correspondant", e.target.value)} placeholder="Nom du correspondant à l’étude" />
             <Input label="Email correspondant" type="email" value={form.correspondant_email} onChange={(e) => f("correspondant_email", e.target.value)} />
             <Input label="Signataire" value={form.signataire} onChange={(e) => f("signataire", e.target.value)} />
             <Input label="Collaborateur" value={form.collaborateur} onChange={(e) => f("collaborateur", e.target.value)} />

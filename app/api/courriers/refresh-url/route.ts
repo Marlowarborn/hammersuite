@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { isResponse, requireSession } from "@/lib/auth";
 
 function err(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -12,14 +12,15 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as { courrier_id?: string } | null;
   if (!body?.courrier_id) return err("courrier_id requis", 400);
 
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return err("Non authentifié", 401);
+  const session = await requireSession();
+  if (isResponse(session)) return session;
+  const { supabase } = session;
 
   const { data: courrier } = await supabase
     .from("courriers")
     .select("id, pdfmonkey_doc_id, organisation_id, pdf_url")
     .eq("id", body.courrier_id)
+    .eq("organisation_id", session.profile.organisation_id)
     .single();
 
   if (!courrier) return err("Courrier introuvable", 404);

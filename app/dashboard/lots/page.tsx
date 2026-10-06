@@ -64,9 +64,6 @@ export default function LotsPage() {
   const [search, setSearch] = useState("");
   const [form, setForm] = useState(emptyForm());
 
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -82,6 +79,11 @@ export default function LotsPage() {
     setObjets(data || []);
     setLoading(false);
   };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getNextNumero = () => {
     const year = new Date().getFullYear();
@@ -137,7 +139,7 @@ export default function LotsPage() {
     }
   };
 
-  const handleBulkImport = async (newObjets: any[]) => {
+  const handleBulkImport = async (newObjets: Record<string, unknown>[]) => {
     if (!orgId) return;
     const year = new Date().getFullYear();
     const maxExisting = objets.filter(o => o.numero_repertoire?.startsWith(String(year))).map(o => parseInt(o.numero_repertoire.split("-")[1]) || 0).reduce((a, b) => Math.max(a, b), 0);
@@ -218,11 +220,11 @@ export default function LotsPage() {
           { label: "Époque / période", key: "epoque", placeholder: "ex. XIXe siècle" },
           { label: "Estimation basse (€)", key: "estimation_basse", type: "number", placeholder: "0" },
           { label: "Estimation haute (€)", key: "estimation_haute", type: "number", placeholder: "0" },
-        ].map((field: any) => (
+        ].map((field: { label: string; key: string; type?: string; placeholder?: string; full?: boolean }) => (
           <div key={field.key} style={{ gridColumn: field.full ? "1 / -1" : "auto" }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--muted)", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>{field.label}</label>
             <input type={field.type || "text"} placeholder={field.placeholder || ""}
-              value={(form as any)[field.key]}
+              value={form[field.key as keyof typeof form]}
               onChange={e => setForm({ ...form, [field.key]: e.target.value })}
               style={{ width: "100%", padding: "8px 10px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 13, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)" }} />
           </div>
@@ -246,7 +248,7 @@ export default function LotsPage() {
     </>
   );
 
-  const Modal = ({ title, subtitle, onClose, onConfirm, confirmLabel, children }: any) => (
+  const Modal = ({ title, subtitle, onClose, onConfirm, confirmLabel, children }: { title: string; subtitle?: string; onClose: () => void; onConfirm: () => void; confirmLabel: string; children: React.ReactNode }) => (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "24px"}}
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{ background: "var(--white)", borderRadius: "var(--radius-lg)", padding: 32, width: "100%", maxWidth: 600, boxShadow: "var(--shadow-lg)", marginTop: "auto", marginBottom: "auto",  }}>

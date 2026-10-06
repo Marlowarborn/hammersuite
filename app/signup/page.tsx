@@ -40,8 +40,8 @@ export default function SignupPage() {
       if (profileError) throw profileError;
 
       router.push("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Une erreur est survenue");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Une erreur est survenue");
     }
     setLoading(false);
   };
@@ -81,7 +81,7 @@ export default function SignupPage() {
               ].map(field => (
                 <div key={field.key} style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>{field.label}</label>
-                  <input type={field.type} placeholder={field.placeholder} value={(form as any)[field.key]} onChange={e => setForm({ ...form, [field.key]: e.target.value })} required
+                  <input type={field.type} placeholder={field.placeholder} value={form[field.key as keyof typeof form]} onChange={e => setForm({ ...form, [field.key]: e.target.value })} required
                     style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius)", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", color: "var(--ink)" }} />
                 </div>
               ))}

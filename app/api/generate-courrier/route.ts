@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { isResponse, requireSession } from "@/lib/auth";
 import {
   COURRIER_TYPES,
   DESTINATAIRES,
@@ -17,7 +17,9 @@ const TEMPLATE_ENV: Record<CourrierType, string> = {
   inventaire_judiciaire: "PDFMONKEY_TEMPLATE_INVENTAIRE_JUDICIAIRE",
 };
 
-const POLL_TIMEOUT_MS = 60_000;
+export const maxDuration = 60;
+
+const POLL_TIMEOUT_MS = 55_000;
 const POLL_INTERVAL_MS = 2_000;
 
 type Body = {
@@ -56,14 +58,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return err("Non authentifié", 401);
+  const session = await requireSession();
+  if (isResponse(session)) return session;
+  const { supabase, user } = session;
 
   const { data: dossier, error: dossierErr } = await supabase
     .from("dossiers")
     .select("*")
     .eq("id", dossier_id)
+    .eq("organisation_id", session.profile.organisation_id)
     .single();
   if (dossierErr || !dossier) return err("Dossier introuvable", 404);
 
@@ -110,8 +113,8 @@ export async function POST(req: NextRequest) {
   });
 
   if (!createRes.ok) {
-    const text = await createRes.text();
-    return err(`PDFMonkey: ${text}`, 502);
+    console.error("[generate-courrier] PDFMonkey", createRes.status, await createRes.text());
+    return err("Génération du courrier refusée par le service PDF", 502);
   }
 
   const created = await createRes.json();
@@ -133,12 +136,12 @@ export async function POST(req: NextRequest) {
       break;
     }
     if (status === "failure" || status === "error") {
-      const cause = polled?.document?.failure_cause || "cause inconnue";
-      return err(`PDFMonkey: génération échouée (${status}) — ${cause}`, 502);
+      console.error("[generate-courrier] échec PDFMonkey", docId, polled?.document?.failure_cause);
+      return err("Génération du courrier échouée (modèle PDF à vérifier)", 502);
     }
   }
 
-  if (!pdfUrl) return err("PDFMonkey: timeout (>60s)", 504);
+  if (!pdfUrl) return err("Génération du courrier trop longue, réessayez", 504);
 
   const { data: courrier, error: insertErr } = await supabase
     .from("courriers")
@@ -159,7 +162,8 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (insertErr || !courrier) {
-    return err(`Sauvegarde courrier: ${insertErr?.message || "inconnue"}`, 500);
+    console.error("[generate-courrier] insertion", insertErr?.message);
+    return err("Courrier généré mais non enregistré", 500);
   }
 
   await supabase.from("activity_log").insert({

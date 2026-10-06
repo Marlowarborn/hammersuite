@@ -223,7 +223,7 @@ export default function SettingsPage() {
                 <Button variant="primary" size="md" onClick={invite} loading={inviting}>Inviter</Button>
               </div>
               <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", marginTop: 8 }}>
-                Un lien de connexion (magic link) est envoyé par email. Le membre rejoint l'organisation à sa première connexion.
+                Un lien de connexion (magic link) est envoyé par email. Le membre rejoint l&apos;organisation à sa première connexion.
               </p>
             </Panel>
           )}
