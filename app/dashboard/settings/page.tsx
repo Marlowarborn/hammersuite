@@ -14,6 +14,7 @@ type Organisation = {
   email: string | null;
   siret: string | null;
   iban: string | null;
+  numero_tva_intracom: string | null;
 };
 
 type Profile = {
@@ -25,6 +26,16 @@ type Profile = {
   organisation_id: string | null;
 };
 
+// Invitation ouverte (accepted_at nul), visible des seuls admins (RLS).
+type Invitation = {
+  id: string;
+  email: string;
+  expires_at: string;
+  created_at: string;
+};
+
+const INVITATION_COLUMNS = "id, email, expires_at, created_at";
+
 type SettingsTab = "organisation" | "membres" | "profil";
 
 const ORG_FIELDS: { key: keyof Organisation; label: string; span?: boolean }[] = [
@@ -35,13 +46,13 @@ const ORG_FIELDS: { key: keyof Organisation; label: string; span?: boolean }[] =
   { key: "telephone", label: "Téléphone" },
   { key: "email", label: "Email" },
   { key: "siret", label: "SIRET" },
-  { key: "iban", label: "IBAN" },
+  { key: "numero_tva_intracom", label: "N° TVA intracommunautaire" },
+  { key: "iban", label: "IBAN", span: true },
 ];
 
 const ROLE_BADGE: Record<string, { label: string; variant: "success" | "neutral" }> = {
   admin: { label: "Admin", variant: "success" },
   member: { label: "Membre", variant: "neutral" },
-  user: { label: "Membre", variant: "neutral" },
 };
 
 function Panel({ title, children, footer }: { title: string; children: React.ReactNode; footer?: React.ReactNode }) {
@@ -67,6 +78,7 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [org, setOrg] = useState<Organisation | null>(null);
   const [members, setMembers] = useState<Profile[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
 
   const [savingOrg, setSavingOrg] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -93,7 +105,7 @@ export default function SettingsPage() {
       if (orgId) {
         const { data: orgData } = await supabase
           .from("organisations")
-          .select("id, name, adresse, code_postal, ville, telephone, email, siret, iban")
+          .select("id, name, adresse, code_postal, ville, telephone, email, siret, iban, numero_tva_intracom")
           .eq("id", orgId)
           .single();
         setOrg((orgData as Organisation) || null);
@@ -104,6 +116,17 @@ export default function SettingsPage() {
           .eq("organisation_id", orgId)
           .order("full_name", { ascending: true });
         setMembers((memberData as Profile[]) || []);
+
+        // Invitations en attente : lisibles par les seuls admins (RLS), inutile de les demander sinon.
+        if (prof?.role === "admin") {
+          const { data: invitationData } = await supabase
+            .from("invitations")
+            .select(INVITATION_COLUMNS)
+            .eq("organisation_id", orgId)
+            .is("accepted_at", null)
+            .order("created_at", { ascending: false });
+          setInvitations((invitationData as Invitation[]) || []);
+        }
       }
       setLoading(false);
     })();
@@ -114,7 +137,8 @@ export default function SettingsPage() {
     setOrg((prev) => (prev ? { ...prev, [key]: value } : prev));
 
   const saveOrg = async () => {
-    if (!org) return;
+    // Mise à jour réservée aux admins (politique organisations_update_admin).
+    if (!org || !isAdmin) return;
     setSavingOrg(true);
     const { error } = await supabase
       .from("organisations")
@@ -127,6 +151,7 @@ export default function SettingsPage() {
         email: org.email,
         siret: org.siret,
         iban: org.iban,
+        numero_tva_intracom: org.numero_tva_intracom,
       })
       .eq("id", org.id);
     setSavingOrg(false);
@@ -152,17 +177,41 @@ export default function SettingsPage() {
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast.error("Adresse email invalide."); return; }
     if (!profile?.organisation_id) { toast.error("Organisation introuvable."); return; }
     setInviting(true);
+
+    // 1. L'invitation en base est la seule preuve que le trigger handle_new_user
+    //    accepte pour rattacher le nouveau compte à l'organisation.
+    const { data: invitation, error: invitationError } = await supabase
+      .from("invitations")
+      .insert({ organisation_id: profile.organisation_id, email, role: "member" })
+      .select(INVITATION_COLUMNS)
+      .single();
+    if (invitationError || !invitation) {
+      setInviting(false);
+      if (invitationError?.code === "23505") toast.error("Une invitation est déjà en attente pour cette adresse.");
+      else toast.error(`Invitation impossible : ${invitationError?.message ?? "erreur inconnue"}`);
+      return;
+    }
+
+    // 2. Envoi du lien de connexion ; invitation_org_id désigne l'invitation à honorer.
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/dashboard` : undefined,
-        data: { organisation_id: profile.organisation_id, invited_by: userId, role: "member" },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        data: { invitation_org_id: profile.organisation_id },
       },
     });
+    if (error) {
+      // Lien non envoyé : on retire l'invitation pour qu'un nouvel essai ne bute pas sur l'unicité.
+      await supabase.from("invitations").delete().eq("id", invitation.id);
+      setInviting(false);
+      toast.error(`Invitation impossible : ${error.message}`);
+      return;
+    }
     setInviting(false);
-    if (error) toast.error(`Invitation impossible : ${error.message}`);
-    else { toast.success(`Lien d'invitation envoyé à ${email}.`); setInviteEmail(""); }
+    setInvitations((prev) => [invitation, ...prev]);
+    toast.success(`Lien d'invitation envoyé à ${email}.`);
+    setInviteEmail("");
   };
 
   const tabs = useMemo(
@@ -186,8 +235,13 @@ export default function SettingsPage() {
         org ? (
           <Panel
             title="Maison de vente"
-            footer={<Button variant="primary" size="md" onClick={saveOrg} loading={savingOrg}>Enregistrer</Button>}
+            footer={isAdmin ? <Button variant="primary" size="md" onClick={saveOrg} loading={savingOrg}>Enregistrer</Button> : undefined}
           >
+            {!isAdmin && (
+              <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", marginBottom: 14 }}>
+                Seul un administrateur de l&apos;organisation peut modifier ces informations.
+              </p>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               {ORG_FIELDS.map((field) => (
                 <div key={field.key} style={field.span ? { gridColumn: "1 / -1" } : undefined}>
@@ -195,6 +249,8 @@ export default function SettingsPage() {
                     label={field.label}
                     value={org[field.key] ?? ""}
                     onChange={(e) => setOrgField(field.key, e.target.value)}
+                    disabled={!isAdmin}
+                    readOnly={!isAdmin}
                   />
                 </div>
               ))}
@@ -223,8 +279,30 @@ export default function SettingsPage() {
                 <Button variant="primary" size="md" onClick={invite} loading={inviting}>Inviter</Button>
               </div>
               <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", marginTop: 8 }}>
-                Un lien de connexion (magic link) est envoyé par email. Le membre rejoint l&apos;organisation à sa première connexion.
+                Un lien de connexion (magic link) est envoyé par email. Le membre rejoint l&apos;organisation à sa première connexion. L&apos;invitation expire au bout de 7 jours.
               </p>
+
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+                <p style={{ fontSize: "var(--text-sm)", fontWeight: 600, marginBottom: 8 }}>Invitations en attente</p>
+                {invitations.length === 0 ? (
+                  <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-2)" }}>Aucune invitation en attente.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {invitations.map((inv, i) => {
+                      const expiree = new Date(inv.expires_at).getTime() < Date.now();
+                      const date = new Date(inv.expires_at).toLocaleDateString("fr-FR");
+                      return (
+                        <div key={inv.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderBottom: i < invitations.length - 1 ? "1px solid var(--border)" : "none" }}>
+                          <p style={{ fontSize: "var(--text-md)", color: "var(--ink)" }}>{inv.email}</p>
+                          <p style={{ fontSize: "var(--text-xs)", color: expiree ? "var(--error)" : "var(--ink-2)", flexShrink: 0 }}>
+                            {expiree ? `Expirée le ${date}` : `Expire le ${date}`}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </Panel>
           )}
           <Panel title="Membres de l'organisation">

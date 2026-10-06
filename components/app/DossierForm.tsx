@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { Modal, Input, Select, Button, useToast } from "@/components/ui";
 import { seedChecklist } from "@/lib/checklists";
+import { signedUrl } from "@/lib/storage";
 
 const NATURES = [
   "Liquidation Judiciaire",
@@ -47,7 +48,10 @@ export type DossierFormValues = {
   gerant_telephone: string;
   gerant_email: string;
   declaration_honneur_signee: boolean;
+  // Ancien enregistrement : URL signée 1 an. Lecture seule, jamais réécrite par le formulaire.
   declaration_honneur_url: string | null;
+  // Chemin du fichier dans le bucket privé dossier-docs, signé à l'ouverture du formulaire.
+  declaration_honneur_path: string | null;
   commentaires: string;
 };
 
@@ -86,6 +90,7 @@ export const emptyDossierForm = (): DossierFormValues => ({
   gerant_email: "",
   declaration_honneur_signee: false,
   declaration_honneur_url: null,
+  declaration_honneur_path: null,
   commentaires: "",
 });
 
@@ -184,6 +189,7 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
   const [form, setForm] = useState<DossierFormValues>(() => ({ ...emptyDossierForm(), ...(initialValues || {}) } as DossierFormValues));
   const [loading, setLoading] = useState(false);
   const [declarationFile, setDeclarationFile] = useState<File | null>(null);
+  const [declarationHref, setDeclarationHref] = useState<string | null>(null);
   const declarationInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -191,6 +197,19 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
       setForm((prev) => ({ ...prev, ...initialValues } as DossierFormValues));
     }
   }, [initialValues]);
+
+  // Déclaration existante : on signe le chemin (1 h) ; repli sur l'ancienne URL pour les
+  // enregistrements antérieurs à declaration_honneur_path.
+  const declarationSource = form.declaration_honneur_path || form.declaration_honneur_url;
+  useEffect(() => {
+    let annule = false;
+    signedUrl(createClient(), "dossier-docs", declarationSource).then((url) => {
+      if (!annule) setDeclarationHref(url);
+    });
+    return () => {
+      annule = true;
+    };
+  }, [declarationSource]);
 
   const f = <K extends keyof DossierFormValues>(k: K, v: DossierFormValues[K]) =>
     setForm((prev) => ({ ...prev, [k]: v }));
@@ -206,8 +225,8 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
       toast.error(`Déclaration honneur : ${error.message}`);
       return null;
     }
-    const { data } = await supabase.storage.from("dossier-docs").createSignedUrl(path, 60 * 60 * 24 * 365);
-    return data?.signedUrl || null;
+    // Bucket privé : on renvoie le chemin, signé à la demande à l'affichage.
+    return path;
   };
 
   const handleSubmit = async () => {
@@ -220,10 +239,13 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
       const payload: Record<string, unknown> = {
         ...form,
         organisation_id: organisationId,
+        date_ouverture: form.date_ouverture || null,
         date_vente: form.date_vente || null,
         date_jugement: form.date_jugement || null,
       };
+      // Les références de fichier ne passent jamais par le payload : seul l'upload les écrit.
       delete payload.declaration_honneur_url;
+      delete payload.declaration_honneur_path;
 
       let saved: Record<string, unknown> | null = null;
 
@@ -252,24 +274,17 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
       }
 
       if (declarationFile && saved && saved.id) {
-        const url = await uploadDeclaration(String(saved.id));
-        if (url) {
-          const { data: updated } = await supabase
+        const path = await uploadDeclaration(String(saved.id));
+        if (path) {
+          const { data: updated, error: declarationError } = await supabase
             .from("dossiers")
-            .update({ declaration_honneur_url: url, declaration_honneur_signee: true })
+            .update({ declaration_honneur_path: path, declaration_honneur_signee: true })
             .eq("id", String(saved.id))
             .select()
             .single();
+          if (declarationError) toast.error(`Déclaration honneur : ${declarationError.message}`);
           if (updated) saved = updated as Record<string, unknown>;
         }
-      } else if (form.declaration_honneur_url !== undefined && saved && saved.id && mode === "edit") {
-        const { data: updated } = await supabase
-          .from("dossiers")
-          .update({ declaration_honneur_url: form.declaration_honneur_url })
-          .eq("id", String(saved.id))
-          .select()
-          .single();
-        if (updated) saved = updated as Record<string, unknown>;
       }
 
       toast.success(mode === "create" ? "Dossier créé." : "Dossier mis à jour.");
@@ -388,14 +403,14 @@ export default function DossierForm({ mode, initialValues, organisationId, dossi
                 />
                 <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                   <Button variant="secondary" size="sm" type="button" onClick={() => declarationInputRef.current?.click()}>
-                    {declarationFile ? "Changer le document" : form.declaration_honneur_url ? "Remplacer le document" : "Téléverser le PDF"}
+                    {declarationFile ? "Changer le document" : declarationSource ? "Remplacer le document" : "Téléverser le PDF"}
                   </Button>
                   {declarationFile && (
                     <span style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>{declarationFile.name}</span>
                   )}
-                  {!declarationFile && form.declaration_honneur_url && (
+                  {!declarationFile && declarationHref && (
                     <a
-                      href={form.declaration_honneur_url}
+                      href={declarationHref}
                       target="_blank"
                       rel="noreferrer"
                       style={{ fontSize: "var(--text-sm)", color: "var(--accent-dark)" }}

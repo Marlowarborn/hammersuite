@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
+import { useToast } from "@/components/ui";
 import ImportModal from "@/components/app/ImportModal";
 
 type TypeEntree = "volontaire" | "judiciaire" | "depot";
@@ -53,6 +54,7 @@ const emptyForm = () => ({
 
 export default function LotsPage() {
   const supabase = createClient();
+  const toast = useToast();
   const [objets, setObjets] = useState<Objet[]>([]);
   const [loading, setLoading] = useState(true);
   const [orgId, setOrgId] = useState<string | null>(null);
@@ -85,17 +87,17 @@ export default function LotsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getNextNumero = () => {
-    const year = new Date().getFullYear();
-    const max = objets.filter(o => o.numero_repertoire?.startsWith(String(year))).map(o => parseInt(o.numero_repertoire.split("-")[1]) || 0).reduce((a, b) => Math.max(a, b), 0);
-    return `${year}-${String(max + 1).padStart(3, "0")}`;
-  };
-
   const handleCreate = async () => {
     if (!form.titre || !orgId) return;
+    // Numéro attribué par un compteur atomique en base (plus de calcul max+1 côté client).
+    const { data: numero, error: numeroError } = await supabase.rpc("next_numero_repertoire", { org: orgId });
+    if (numeroError || typeof numero !== "string") {
+      toast.error(`Numérotation impossible : ${numeroError?.message ?? "réponse inattendue du serveur"}`);
+      return;
+    }
     const objet = {
       organisation_id: orgId,
-      numero_repertoire: getNextNumero(),
+      numero_repertoire: numero,
       date_entree: form.date_entree,
       type_entree: form.type_entree,
       titre: form.titre,
@@ -112,7 +114,11 @@ export default function LotsPage() {
       notes: form.notes,
     };
     const { data, error } = await supabase.from("objets").insert(objet).select().single();
-    if (!error && data) {
+    if (error) {
+      toast.error(`Enregistrement impossible : ${error.message}`);
+      return;
+    }
+    if (data) {
       setObjets([data, ...objets]);
       setSelected(data);
       setShowCreate(false);
@@ -140,13 +146,18 @@ export default function LotsPage() {
   };
 
   const handleBulkImport = async (newObjets: Record<string, unknown>[]) => {
-    if (!orgId) return;
-    const year = new Date().getFullYear();
-    const maxExisting = objets.filter(o => o.numero_repertoire?.startsWith(String(year))).map(o => parseInt(o.numero_repertoire.split("-")[1]) || 0).reduce((a, b) => Math.max(a, b), 0);
+    if (!orgId || newObjets.length === 0) return;
+    // Réservation d'un bloc de numéros consécutifs en un seul appel, renvoyés dans l'ordre.
+    const { data: reserves, error: reserveError } = await supabase.rpc("reserver_numeros_repertoire", { org: orgId, quantite: newObjets.length });
+    const numeros = Array.isArray(reserves) ? reserves.filter((n): n is string => typeof n === "string") : [];
+    if (reserveError || numeros.length !== newObjets.length) {
+      toast.error(`Numérotation impossible : ${reserveError?.message ?? "réponse inattendue du serveur"}`);
+      return;
+    }
 
     const toInsert = newObjets.map((o, i) => ({
       organisation_id: orgId,
-      numero_repertoire: `${year}-${String(maxExisting + i + 1).padStart(3, "0")}`,
+      numero_repertoire: numeros[i],
       date_entree: new Date().toISOString().split("T")[0],
       type_entree: "volontaire",
       titre: o.titre || "Sans titre",
@@ -161,10 +172,16 @@ export default function LotsPage() {
       estimation_haute: o.estimation_haute || 0,
       status: "en_attente",
       notes: o.notes || "",
+      // Objets issus de l'extraction IA du document importé.
+      genere_par_ia: true,
     }));
 
     const { data, error } = await supabase.from("objets").insert(toInsert).select();
-    if (!error && data) setObjets([...data, ...objets]);
+    if (error) {
+      toast.error(`Import impossible : ${error.message}`);
+      return;
+    }
+    if (data) setObjets([...data, ...objets]);
   };
 
   const openEdit = () => {
@@ -376,7 +393,7 @@ export default function LotsPage() {
       </div>
 
       {showCreate && (
-        <Modal title={`Enregistrer un objet — ${getNextNumero()}`} onClose={() => setShowCreate(false)} onConfirm={handleCreate} confirmLabel="Enregistrer">
+        <Modal title="Enregistrer un objet" subtitle="Le numéro de répertoire est attribué à l'enregistrement." onClose={() => setShowCreate(false)} onConfirm={handleCreate} confirmLabel="Enregistrer">
           <FormFields />
         </Modal>
       )}

@@ -8,6 +8,18 @@ import Link from "next/link";
 type Step = "photo" | "analyzing" | "form" | "saving" | "done";
 type TypeEntree = "volontaire" | "judiciaire" | "depot";
 
+const emptyForm = () => ({
+  titre: "",
+  technique: "",
+  epoque: "",
+  description: "",
+  consignateur: "",
+  estimation_basse: "",
+  estimation_haute: "",
+  type_entree: "volontaire" as TypeEntree,
+  notes: "",
+});
+
 export default function SaisiePage() {
   const router = useRouter();
   const supabase = createClient();
@@ -15,17 +27,9 @@ export default function SaisiePage() {
   const [step, setStep] = useState<Step>("photo");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    titre: "",
-    technique: "",
-    epoque: "",
-    description: "",
-    consignateur: "",
-    estimation_basse: "",
-    estimation_haute: "",
-    type_entree: "volontaire" as TypeEntree,
-    notes: "",
-  });
+  const [form, setForm] = useState(emptyForm());
+  // Vrai quand le formulaire a été prérempli par l'analyse photo (colonne objets.genere_par_ia).
+  const [remplieParIa, setRemplieParIa] = useState(false);
   const [confidence, setConfidence] = useState<"high" | "medium" | "low">("medium");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
 
@@ -62,6 +66,7 @@ export default function SaisiePage() {
         description: data.description || "",
       }));
       setConfidence(data.confidence || "medium");
+      setRemplieParIa(true);
       setStep("form");
     } catch {
       setError("Erreur d'analyse. Remplissez manuellement.");
@@ -79,11 +84,14 @@ export default function SaisiePage() {
     const { data: profile } = await supabase.from("profiles").select("organisation_id").eq("id", user.id).single();
     if (!profile?.organisation_id) { setError("Organisation introuvable"); setStep("form"); return; }
 
-    const { data: existing } = await supabase.from("objets").select("numero_repertoire").eq("organisation_id", profile.organisation_id).order("created_at", { ascending: false }).limit(1).single();
-
-    const year = new Date().getFullYear();
-    const lastNum = existing?.numero_repertoire ? parseInt(existing.numero_repertoire.split("-")[1]) || 0 : 0;
-    const numero = `${year}-${String(lastNum + 1).padStart(3, "0")}`;
+    // Numéro attribué par un compteur atomique en base : deux saisies simultanées
+    // ne peuvent plus obtenir le même numéro (contrainte d'unicité sur objets).
+    const { data: numero, error: numeroError } = await supabase.rpc("next_numero_repertoire", { org: profile.organisation_id });
+    if (numeroError || typeof numero !== "string") {
+      setError("Numérotation impossible : " + (numeroError?.message ?? "réponse inattendue du serveur"));
+      setStep("form");
+      return;
+    }
 
     const { error: insertError } = await supabase.from("objets").insert({
       organisation_id: profile.organisation_id,
@@ -99,6 +107,7 @@ export default function SaisiePage() {
       estimation_haute: parseInt(form.estimation_haute) || 0,
       status: "en_attente",
       notes: form.notes,
+      genere_par_ia: remplieParIa,
     });
 
     if (insertError) {
@@ -168,7 +177,7 @@ export default function SaisiePage() {
             <p style={{ fontSize: 13, color: "var(--muted)" }}>ou choisir depuis la galerie</p>
           </button>
 
-          <button onClick={() => setStep("form")} style={{
+          <button onClick={() => { setForm(emptyForm()); setRemplieParIa(false); setStep("form"); }} style={{
             width: "100%", padding: "14px",
             background: "transparent",
             border: "1px solid var(--border)",
@@ -294,7 +303,7 @@ export default function SaisiePage() {
           <p style={{ fontSize: 15, color: "var(--muted)", marginBottom: 40, lineHeight: 1.6 }}>
             L&apos;objet a été ajouté au répertoire avec succès.
           </p>
-          <button onClick={() => { setStep("photo"); setPhotoUrl(null); setPhotoFile(null); setForm({ titre: "", technique: "", epoque: "", description: "", consignateur: "", estimation_basse: "", estimation_haute: "", type_entree: "volontaire", notes: "" }); }}
+          <button onClick={() => { setStep("photo"); setPhotoUrl(null); setPhotoFile(null); setForm(emptyForm()); setRemplieParIa(false); }}
             style={{ width: "100%", padding: "16px", background: "var(--black)", color: "white", border: "none", borderRadius: "var(--radius)", fontSize: 16, fontWeight: 600, cursor: "pointer", marginBottom: 12 }}>
             Saisir un autre objet
           </button>

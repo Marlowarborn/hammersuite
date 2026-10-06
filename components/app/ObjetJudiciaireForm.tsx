@@ -86,20 +86,18 @@ export default function ObjetJudiciaireForm({ dossierId, organisationId, default
 
   const setF = <K extends keyof Form>(k: K, v: Form[K]) => setForm((prev) => ({ ...prev, [k]: v }));
 
-  const getNextNumero = async () => {
-    const year = new Date().getFullYear();
-    const { data } = await supabase
-      .from("objets")
-      .select("numero_repertoire")
-      .eq("organisation_id", organisationId)
-      .like("numero_repertoire", `${year}-%`);
-    const max = (data || []).reduce((acc, row) => {
-      const n = parseInt(String(row.numero_repertoire).split("-")[1]) || 0;
-      return Math.max(acc, n);
-    }, 0);
-    return `${year}-${String(max + 1).padStart(3, "0")}`;
+  // Numéro de répertoire réservé côté base (fonction SQL atomique, compteur par organisation
+  // et par année) : plus de collision entre deux saisies simultanées. Renvoie "AAAA-NNN".
+  const reserverNumero = async (): Promise<string | null> => {
+    const { data, error } = await supabase.rpc("next_numero_repertoire", { org: organisationId });
+    if (error || typeof data !== "string" || !data) {
+      toast.error(`Numéro de répertoire : ${error?.message || "réponse inattendue"}`);
+      return null;
+    }
+    return data;
   };
 
+  // Bucket privé : on renvoie le chemin de stockage, signé plus tard à l'affichage.
   const uploadPhoto = async (objetId: string): Promise<string | null> => {
     if (!photoFile) return null;
     const ext = photoFile.name.split(".").pop() || "jpg";
@@ -109,8 +107,7 @@ export default function ObjetJudiciaireForm({ dossierId, organisationId, default
       toast.error(`Photo : ${error.message}`);
       return null;
     }
-    const { data } = supabase.storage.from("objet-photos").getPublicUrl(path);
-    return data.publicUrl;
+    return path;
   };
 
   const uploadVehiculeDocs = async (objetId: string): Promise<Partial<Record<VehiculeDocKey, string>>> => {
@@ -125,10 +122,8 @@ export default function ObjetJudiciaireForm({ dossierId, organisationId, default
         toast.error(`${doc.label} : ${error.message}`);
         continue;
       }
-      const { data } = supabase.storage.from("vehicule-docs").createSignedUrl
-        ? await supabase.storage.from("vehicule-docs").createSignedUrl(path, 60 * 60 * 24 * 365)
-        : { data: { signedUrl: path } as { signedUrl: string } };
-      result[doc.key] = data?.signedUrl || path;
+      // Les colonnes *_url de vehicule_docs reçoivent le chemin de stockage, pas une URL.
+      result[doc.key] = path;
     }
     return result;
   };
@@ -140,7 +135,8 @@ export default function ObjetJudiciaireForm({ dossierId, organisationId, default
     }
     setLoading(true);
     try {
-      const numero = await getNextNumero();
+      const numero = await reserverNumero();
+      if (!numero) return;
       const insertPayload = {
         organisation_id: organisationId,
         dossier_id: dossierId,
@@ -165,9 +161,10 @@ export default function ObjetJudiciaireForm({ dossierId, organisationId, default
       }
 
       if (photoFile) {
-        const url = await uploadPhoto(created.id);
-        if (url) {
-          await supabase.from("objets").update({ photo_url: url }).eq("id", created.id);
+        const path = await uploadPhoto(created.id);
+        if (path) {
+          const { error: photoError } = await supabase.from("objets").update({ photo_path: path }).eq("id", created.id);
+          if (photoError) toast.error(`Photo : ${photoError.message}`);
         }
       }
 
