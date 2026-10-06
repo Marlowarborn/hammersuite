@@ -1,39 +1,16 @@
-import { MOCK_CLIENTS } from "@/data/mock";
+import ModuleEnPreparation from "@/components/app/ModuleEnPreparation";
 
-export default function CRMPage() {
+export default function CrmPage() {
   return (
-    <div className="fade-up">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28 }}>
-        <div>
-          <h1 className="serif" style={{ fontSize: 32, fontWeight: 500, letterSpacing: "-0.02em", marginBottom: 4 }}>CRM clients</h1>
-          <p style={{ fontSize: 14, color: "var(--muted)" }}>{MOCK_CLIENTS.length} clients · Module complet en développement</p>
-        </div>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(139,111,71,0.1)", border: "1px solid rgba(139,111,71,0.2)", borderRadius: 99, padding: "5px 14px" }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", display: "inline-block" }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", letterSpacing: "0.04em" }}>EN DÉVELOPPEMENT</span>
-        </div>
-      </div>
-      <div style={{ background: "var(--white)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", marginBottom: 20 }}>
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", display: "grid", gridTemplateColumns: "1fr 120px 160px 80px", gap: 16 }}>
-          {["Client", "Type", "Email", "Lots"].map(h => (
-            <p key={h} style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted)" }}>{h}</p>
-          ))}
-        </div>
-        {MOCK_CLIENTS.map((client, i) => (
-          <div key={client.id} style={{ padding: "16px 20px", borderBottom: i < MOCK_CLIENTS.length - 1 ? "1px solid var(--border)" : "none", display: "grid", gridTemplateColumns: "1fr 120px 160px 80px", gap: 16, alignItems: "center", opacity: 0.6 }}>
-            <div>
-              <p style={{ fontSize: 14, fontWeight: 500, color: "var(--black)" }}>{client.name}</p>
-              <p style={{ fontSize: 12, color: "var(--muted)" }}>{client.contact}</p>
-            </div>
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>{client.type}</span>
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>{client.email}</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{client.lots}</span>
-          </div>
-        ))}
-      </div>
-      <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "20px 24px" }}>
-        <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.65 }}>Le CRM complet, avec fiches clients détaillées, historique des consignations, préférences d’achat et suivi des correspondances, est disponible en accès anticipé pour les offres Maison et Institution.</p>
-      </div>
-    </div>
+    <ModuleEnPreparation
+      titre="Clients"
+      description="Le fichier des vendeurs, acheteurs, mandataires et correspondants n'est pas encore disponible. Il portera aussi les obligations de vigilance (identité, seuils, gel des avoirs)."
+      prevu={[
+        "Fiches vendeurs, acheteurs, successions, marchands et mandataires",
+        "Mandats et historique des dépôts et des achats",
+        "Vérification d'identité et vigilance LCB-FT au-dessus des seuils",
+        "Lien avec les bordereaux et les règlements",
+      ]}
+    />
   );
 }

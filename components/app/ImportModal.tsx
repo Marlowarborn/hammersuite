@@ -56,7 +56,7 @@ export default function ImportModal({ onClose, onImport }: Props) {
         return;
       }
 
-      setObjets(data.objets.map((o: any) => ({ ...o, selected: true })));
+      setObjets(data.objets.map((o: Record<string, unknown>) => ({ ...o, selected: true })));
       setStep("review");
     } catch (err) {
       setError("Erreur de connexion. Réessayez.");
