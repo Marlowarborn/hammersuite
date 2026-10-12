@@ -12,8 +12,10 @@ const steps = [
   ["bouchon auth/storage", join(here, "stub_supabase.sql")],
   ["0001_schema", join(root, "migrations", "0001_schema.sql")],
   ["0002_rls", join(root, "migrations", "0002_rls.sql")],
+  ["0003_checklist_unique", join(root, "migrations", "0003_checklist_unique.sql")],
   ["rejeu 0001 (idempotence)", join(root, "migrations", "0001_schema.sql")],
   ["rejeu 0002 (idempotence)", join(root, "migrations", "0002_rls.sql")],
+  ["rejeu 0003 (idempotence)", join(root, "migrations", "0003_checklist_unique.sql")],
   ["seed", join(root, "seed.sql")],
   ["tests RLS", join(here, "rls.sql")],
 ];
