@@ -47,6 +47,7 @@ type Dossier = Record<string, unknown> & {
   collaborateur?: string | null;
   declaration_honneur_signee?: boolean | null;
   declaration_honneur_url?: string | null;
+  declaration_honneur_path?: string | null;
 };
 
 type Organisation = Record<string, unknown> & {
@@ -60,6 +61,7 @@ type Organisation = Record<string, unknown> & {
   email?: string | null;
   siret?: string | null;
   iban?: string | null;
+  numero_tva_intracom?: string | null;
 };
 
 type Profile = {
@@ -98,24 +100,34 @@ const formatDateFR = (iso: string | null | undefined): string => {
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
-export async function nextFactureReference(
+// Durée des liens signés transmis à PDFMonkey (secondes) : le PDF est rendu dans les
+// minutes qui suivent l'appel, deux heures laissent une marge confortable.
+const DUREE_LIEN_SIGNE_S = 2 * 60 * 60;
+
+/**
+ * Signe en un seul appel des chemins d'un bucket privé. Renvoie une table
+ * chemin -> URL signée ; un chemin absent de la table n'a pas pu être signé et
+ * l'appelant garde son repli (ancienne URL stockée).
+ */
+async function signerChemins(
   supabase: SupabaseClient,
-  organisationId: string,
-): Promise<string> {
-  const year = new Date().getFullYear();
-  const prefix = `NH-${year}-`;
-  const { data } = await supabase
-    .from("courriers")
-    .select("reference")
-    .eq("organisation_id", organisationId)
-    .eq("type", "note_honoraires")
-    .like("reference", `${prefix}%`);
-  const max = (data || []).reduce((acc: number, row: { reference: string | null }) => {
-    const tail = String(row.reference || "").split("-").pop() || "0";
-    const n = parseInt(tail, 10);
-    return Math.max(acc, isFinite(n) ? n : 0);
-  }, 0);
-  return `${prefix}${String(max + 1).padStart(3, "0")}`;
+  bucket: string,
+  chemins: string[],
+): Promise<Map<string, string>> {
+  const signes = new Map<string, string>();
+  const uniques = Array.from(new Set(chemins.filter((c) => c.length > 0)));
+  if (uniques.length === 0) return signes;
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrls(uniques, DUREE_LIEN_SIGNE_S);
+  if (error || !data) {
+    console.error("[courrier-payload] signature", bucket, error?.message);
+    return signes;
+  }
+  for (const item of data) {
+    if (item.path && item.signedUrl && !item.error) signes.set(item.path, item.signedUrl);
+  }
+  return signes;
 }
 
 type BuildContext = {
@@ -143,6 +155,11 @@ export async function buildPayload(
     .filter(Boolean)
     .join(", ");
 
+  // Déclaration sur l'honneur : fichier du bucket privé dossier-docs, signé pour PDFMonkey.
+  const declarationPath = dossier.declaration_honneur_path || "";
+  const docsSignes = await signerChemins(supabase, "dossier-docs", [declarationPath]);
+  const declarationUrl = docsSignes.get(declarationPath) || s(dossier.declaration_honneur_url);
+
   const common: Record<string, unknown> = {
     generated_at: now.toISOString(),
     date_courrier: formatDateFR(todayIso),
@@ -159,6 +176,7 @@ export async function buildPayload(
       email: s(organisation?.email),
       siret: s(organisation?.siret),
       iban: s(organisation?.iban),
+      numero_tva_intracom: s(organisation?.numero_tva_intracom),
     },
 
     signataire: {
@@ -234,7 +252,7 @@ export async function buildPayload(
 
     declaration_honneur: {
       signee: dossier.declaration_honneur_signee ?? false,
-      url: s(dossier.declaration_honneur_url),
+      url: declarationUrl,
     },
   };
 
@@ -244,7 +262,7 @@ export async function buildPayload(
     const { data: objetsData } = await supabase
       .from("objets")
       .select(
-        "numero_repertoire,rubrique,description,titre,etat,valeur_exploitation,valeur_reprise,estimation_basse,estimation_haute,photo_url",
+        "numero_repertoire,rubrique,description,titre,etat,valeur_exploitation,valeur_reprise,estimation_basse,estimation_haute,photo_url,photo_path",
       )
       .eq("dossier_id", dossier.id)
       .order("numero_repertoire", { ascending: true });
@@ -260,9 +278,18 @@ export async function buildPayload(
       estimation_basse: number | null;
       estimation_haute: number | null;
       photo_url: string | null;
+      photo_path: string | null;
     };
 
-    const objets = ((objetsData || []) as ObjetRow[]).map((o) => ({
+    const objetRows = (objetsData || []) as ObjetRow[];
+    // Bucket objet-photos devenu privé : une URL signée par photo, en un seul appel.
+    const photosSignees = await signerChemins(
+      supabase,
+      "objet-photos",
+      objetRows.map((o) => o.photo_path || ""),
+    );
+
+    const objets = objetRows.map((o) => ({
       numero_repertoire: s(o.numero_repertoire),
       rubrique: s(o.rubrique),
       rubrique_label: RUBRIQUE_LABELS[o.rubrique || ""] || s(o.rubrique),
@@ -272,7 +299,7 @@ export async function buildPayload(
       valeur_reprise: o.valeur_reprise ?? 0,
       estimation_basse: o.estimation_basse ?? 0,
       estimation_haute: o.estimation_haute ?? 0,
-      photo_url: s(o.photo_url),
+      photo_url: photosSignees.get(o.photo_path || "") || s(o.photo_url),
     }));
 
     type Rubrique = {
@@ -335,8 +362,13 @@ export async function buildPayload(
       .eq("dossier_id", dossier.id);
     const { data: contratsData } = await supabase
       .from("dossier_contrats")
-      .select("type,description,restituer_avant,fichier_url")
+      .select("type,description,restituer_avant,fichier_url,fichier_path")
       .eq("dossier_id", dossier.id);
+
+    type ContratRow = { type: string | null; description: string | null; restituer_avant: string | null; fichier_url: string | null; fichier_path: string | null };
+    const contratRows = (contratsData || []) as ContratRow[];
+    // Fichiers de contrats : bucket privé dossier-docs, un lien signé par fichier.
+    const contratsSignes = await signerChemins(supabase, "dossier-docs", contratRows.map((c) => c.fichier_path || ""));
 
     extras.lieux_stockage = (lieuxData || []).map((l: { adresse: string | null; contact_nom: string | null; contact_telephone: string | null; notes: string | null }) => ({
       adresse: s(l.adresse),
@@ -345,13 +377,13 @@ export async function buildPayload(
       notes: s(l.notes),
     }));
 
-    extras.contrats_annexes = (contratsData || []).map((c: { type: string | null; description: string | null; restituer_avant: string | null; fichier_url: string | null }) => ({
+    extras.contrats_annexes = contratRows.map((c) => ({
       type: s(c.type),
       type_label: CONTRAT_TYPE_LABELS[c.type || ""] || s(c.type),
       description: s(c.description),
       restituer_avant: formatDateFR(c.restituer_avant),
       restituer_avant_iso: s(c.restituer_avant),
-      fichier_url: s(c.fichier_url),
+      fichier_url: (c.fichier_path && contratsSignes.get(c.fichier_path)) || s(c.fichier_url),
     }));
   }
 

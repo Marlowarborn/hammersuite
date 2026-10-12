@@ -174,5 +174,7 @@ export async function seedChecklist(
     })),
   );
   if (rows.length === 0) return;
-  await supabase.from("checklist_items").insert(rows);
+  // Idempotent : un double appel (effet React rejoué, deux onglets) ne crée ni doublon ni erreur.
+  const onConflict = target.dossierId ? "dossier_id,phase,label" : "vente_id,phase,label";
+  await supabase.from("checklist_items").upsert(rows, { onConflict, ignoreDuplicates: true });
 }

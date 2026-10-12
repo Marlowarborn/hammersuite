@@ -113,7 +113,7 @@ export default function LieuxSection({ dossierId, organisationId }: Props) {
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
             <div style={{ gridColumn: "1 / -1" }}>
-              <Input label="Adresse *" value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder="ex. 8 rue Sofia, 75018 PARIS" />
+              <Input label="Adresse *" value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder="Adresse complète du lieu de stockage" />
             </div>
             <Input label="Contact sur place" value={contactNom} onChange={(e) => setContactNom(e.target.value)} placeholder="Nom" />
             <Input label="Téléphone" value={contactTel} onChange={(e) => setContactTel(e.target.value)} />

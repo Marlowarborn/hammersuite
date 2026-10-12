@@ -48,9 +48,6 @@ export default function DossiersPage() {
   const [search, setSearch] = useState("");
   const [filterStatut, setFilterStatut] = useState<string>("all");
 
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -63,6 +60,11 @@ export default function DossiersPage() {
     setDossiers(data || []);
     setLoading(false);
   };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = dossiers.filter((d) => {
     const matchSearch = search === "" ||

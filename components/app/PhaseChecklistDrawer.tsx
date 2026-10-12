@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { Button, Badge, useToast } from "@/components/ui";
 import type { ChecklistKind, PhaseDef } from "@/lib/checklists";
-import { getPhases, seedChecklist } from "@/lib/checklists";
+import { seedChecklist } from "@/lib/checklists";
+import { signedUrls } from "@/lib/storage";
 
 export type ChecklistItem = {
   id: string;
@@ -14,7 +15,10 @@ export type ChecklistItem = {
   is_done: boolean;
   completed_at: string | null;
   completed_by: string | null;
+  // Ancien enregistrement : URL signée 1 an, qui expire.
   doc_url: string | null;
+  // Chemin du justificatif dans le bucket privé dossier-docs.
+  doc_path: string | null;
   notes: string | null;
 };
 
@@ -42,7 +46,32 @@ export default function PhaseChecklistDrawer({
   const supabase = createClient();
   const toast = useToast();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Liens signés des justificatifs, par id d'item (1 h).
+  const [docHrefs, setDocHrefs] = useState<Record<string, string>>({});
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // Les items arrivent en props avec leur doc_path : on signe tous les chemins en un appel
+  // à chaque nouvelle liste (ouverture du tiroir, rafraîchissement après upload).
+  useEffect(() => {
+    let annule = false;
+    const avecDoc = items.filter((i) => i.doc_path);
+    signedUrls(createClient(), "dossier-docs", avecDoc.map((i) => i.doc_path)).then((urls) => {
+      if (annule) return;
+      const parId: Record<string, string> = {};
+      for (const i of avecDoc) {
+        const url = i.doc_path ? urls[i.doc_path] : undefined;
+        if (url) parId[i.id] = url;
+      }
+      setDocHrefs(parId);
+    });
+    return () => {
+      annule = true;
+    };
+  }, [items]);
+
+  // Lien à afficher : chemin signé, sinon ancienne URL.
+  const docHref = (item: ChecklistItem): string | null => docHrefs[item.id] || item.doc_url;
+  const aUnDoc = (item: ChecklistItem): boolean => Boolean(item.doc_path || item.doc_url);
 
   const phaseItems = items.filter((i) => i.phase === phase.id).sort((a, b) => a.ordre - b.ordre);
   const total = phaseItems.length;
@@ -92,12 +121,14 @@ export default function PhaseChecklistDrawer({
       toast.error(error.message);
       return;
     }
-    const { data } = await supabase.storage.from("dossier-docs").createSignedUrl(path, 60 * 60 * 24 * 365);
-    if (data?.signedUrl) {
-      await supabase.from("checklist_items").update({ doc_url: data.signedUrl }).eq("id", item.id);
-      toast.success("Document joint.");
-      onChange();
+    // Bucket privé : on enregistre le chemin, signé à l'affichage.
+    const { error: updateError } = await supabase.from("checklist_items").update({ doc_path: path }).eq("id", item.id);
+    if (updateError) {
+      toast.error(updateError.message);
+      return;
     }
+    toast.success("Document joint.");
+    onChange();
   };
 
   return (
@@ -148,6 +179,7 @@ export default function PhaseChecklistDrawer({
           ) : (
             phaseItems.map((item) => {
               const expanded = expandedId === item.id;
+              const href = docHref(item);
               return (
                 <div key={item.id} style={{ padding: "12px 24px", borderBottom: "1px solid var(--border-subtle)" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -194,8 +226,8 @@ export default function PhaseChecklistDrawer({
                           {expanded ? "Replier" : "Détails"}
                         </button>
                         {item.notes && <Badge variant="neutral" size="sm">Note</Badge>}
-                        {item.doc_url && (
-                          <a href={item.doc_url} target="_blank" rel="noreferrer" style={{ fontSize: "var(--text-xs)", color: "var(--accent-dark)" }}>
+                        {href && (
+                          <a href={href} target="_blank" rel="noreferrer" style={{ fontSize: "var(--text-xs)", color: "var(--accent-dark)" }}>
                             📎 Document
                           </a>
                         )}
@@ -223,10 +255,10 @@ export default function PhaseChecklistDrawer({
                           style={{ display: "none" }}
                         />
                         <Button variant="secondary" size="sm" type="button" onClick={() => fileRefs.current[item.id]?.click()}>
-                          {item.doc_url ? "Remplacer le document" : "Joindre un document"}
+                          {aUnDoc(item) ? "Remplacer le document" : "Joindre un document"}
                         </Button>
-                        {item.doc_url && (
-                          <a href={item.doc_url} target="_blank" rel="noreferrer" style={{ fontSize: "var(--text-sm)", color: "var(--accent-dark)" }}>
+                        {href && (
+                          <a href={href} target="_blank" rel="noreferrer" style={{ fontSize: "var(--text-sm)", color: "var(--accent-dark)" }}>
                             Voir le document
                           </a>
                         )}

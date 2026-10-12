@@ -3,15 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { Button, Badge, EmptyState, Input, Select, useToast } from "@/components/ui";
+import { signedUrls } from "@/lib/storage";
 
 export type Contrat = {
   id: string;
   type: string;
   description: string | null;
+  // Ancien enregistrement : URL signée 1 an, qui expire.
   fichier_url: string | null;
+  // Chemin du fichier dans le bucket privé dossier-docs.
+  fichier_path: string | null;
   restituer_avant: string | null;
   created_at: string;
 };
+
+// Contrat tel qu'affiché : lien prêt à ouvrir, signé au chargement (1 h).
+type ContratAffiche = Contrat & { fichier_href: string | null };
 
 const TYPES = [
   { value: "location", label: "Location" },
@@ -31,7 +38,7 @@ type Props = {
 export default function ContratsSection({ dossierId, organisationId }: Props) {
   const supabase = createClient();
   const toast = useToast();
-  const [contrats, setContrats] = useState<Contrat[]>([]);
+  const [contrats, setContrats] = useState<ContratAffiche[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [type, setType] = useState("location");
@@ -53,7 +60,15 @@ export default function ContratsSection({ dossierId, organisationId }: Props) {
       .select("*")
       .eq("dossier_id", dossierId)
       .order("created_at", { ascending: false });
-    setContrats((data || []) as Contrat[]);
+    const rows = (data || []) as Contrat[];
+    // Une seule requête de signature pour tous les fichiers ; repli sur l'ancienne URL.
+    const urls = await signedUrls(supabase, "dossier-docs", rows.map((c) => c.fichier_path));
+    setContrats(
+      rows.map((c) => ({
+        ...c,
+        fichier_href: (c.fichier_path && urls[c.fichier_path]) || c.fichier_url,
+      })),
+    );
     setLoading(false);
   };
 
@@ -74,8 +89,8 @@ export default function ContratsSection({ dossierId, organisationId }: Props) {
       toast.error(`Fichier : ${error.message}`);
       return null;
     }
-    const { data } = await supabase.storage.from("dossier-docs").createSignedUrl(path, 60 * 60 * 24 * 365);
-    return data?.signedUrl || null;
+    // Bucket privé : on renvoie le chemin, signé à chaque chargement de la liste.
+    return path;
   };
 
   const handleSave = async () => {
@@ -97,9 +112,13 @@ export default function ContratsSection({ dossierId, organisationId }: Props) {
         return;
       }
       if (file) {
-        const url = await uploadFile(created.id);
-        if (url) {
-          await supabase.from("dossier_contrats").update({ fichier_url: url }).eq("id", created.id);
+        const path = await uploadFile(created.id);
+        if (path) {
+          const { error: fichierError } = await supabase
+            .from("dossier_contrats")
+            .update({ fichier_path: path })
+            .eq("id", created.id);
+          if (fichierError) toast.error(`Fichier : ${fichierError.message}`);
         }
       }
       toast.success("Contrat ajouté.");
@@ -183,8 +202,8 @@ export default function ContratsSection({ dossierId, organisationId }: Props) {
               <span style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)" }}>
                 {c.restituer_avant ? new Date(c.restituer_avant).toLocaleDateString("fr-FR") : "—"}
               </span>
-              {c.fichier_url ? (
-                <a href={c.fichier_url} target="_blank" rel="noreferrer" style={{ fontSize: "var(--text-sm)", color: "var(--accent-dark)" }}>
+              {c.fichier_href ? (
+                <a href={c.fichier_href} target="_blank" rel="noreferrer" style={{ fontSize: "var(--text-sm)", color: "var(--accent-dark)" }}>
                   Ouvrir
                 </a>
               ) : (

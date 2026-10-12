@@ -12,6 +12,7 @@ import LieuxSection from "@/components/app/LieuxSection";
 import CourriersTab from "@/components/app/CourriersTab";
 import PhaseChecklistDrawer, { ChecklistItem, ensureChecklist } from "@/components/app/PhaseChecklistDrawer";
 import { getPhases, PHASES_JUDICIAIRE } from "@/lib/checklists";
+import { signedUrl, signedUrls } from "@/lib/storage";
 
 type Dossier = {
   id: string;
@@ -52,6 +53,7 @@ type Dossier = {
   gerant_email: string | null;
   declaration_honneur_signee: boolean | null;
   declaration_honneur_url: string | null;
+  declaration_honneur_path: string | null;
   commentaires: string;
 };
 
@@ -69,7 +71,10 @@ type Objet = {
   estimation_basse: number | null;
   estimation_haute: number | null;
   status: string;
+  // Rempli à l'affichage avec l'URL signée de photo_path (repli : ancienne URL stockée).
   photo_url: string | null;
+  // Chemin de la photo dans le bucket privé objet-photos.
+  photo_path: string | null;
   numero_lot: string | null;
 };
 
@@ -117,7 +122,10 @@ export default function DossierDetailPage() {
       .select("*")
       .eq("dossier_id", dossierId)
       .order("numero_repertoire", { ascending: true });
-    setObjets(objetsData || []);
+    // Bucket privé : toutes les photos signées en un seul appel (1 h), repli sur photo_url.
+    const liste = (objetsData || []) as Objet[];
+    const photos = await signedUrls(supabase, "objet-photos", liste.map((o) => o.photo_path));
+    setObjets(liste.map((o) => ({ ...o, photo_url: (o.photo_path && photos[o.photo_path]) || o.photo_url })));
     if (dossierData) {
       await ensureChecklist(dossierData.organisation_id, "judiciaire", { dossierId: dossierData.id });
       const { data: items } = await supabase
@@ -188,6 +196,20 @@ export default function DossierDetailPage() {
     if (rubriqueFilter === "all") return objets;
     return objets.filter((o) => o.rubrique === rubriqueFilter);
   }, [objets, rubriqueFilter]);
+
+  // Déclaration sur l'honneur : chemin signé à la demande (1 h), repli sur l'ancienne URL.
+  // Relancé après une modification du dossier (nouveau fichier téléversé).
+  const [declarationHref, setDeclarationHref] = useState<string | null>(null);
+  const declarationSource = dossier?.declaration_honneur_path || dossier?.declaration_honneur_url || null;
+  useEffect(() => {
+    let annule = false;
+    signedUrl(createClient(), "dossier-docs", declarationSource).then((url) => {
+      if (!annule) setDeclarationHref(url);
+    });
+    return () => {
+      annule = true;
+    };
+  }, [declarationSource]);
 
   if (loading) return <div style={{ padding: 32, color: "var(--ink-2)" }}>Chargement…</div>;
   if (!dossier) return <div style={{ padding: 32, color: "var(--ink-2)" }}>Dossier introuvable</div>;
@@ -338,9 +360,9 @@ export default function DossierDetailPage() {
               <Badge variant={dossier.declaration_honneur_signee ? "success" : "warning"} size="md">
                 {dossier.declaration_honneur_signee ? "Signée" : "Non signée"}
               </Badge>
-              {dossier.declaration_honneur_url && (
+              {declarationHref && (
                 <a
-                  href={dossier.declaration_honneur_url}
+                  href={declarationHref}
                   target="_blank"
                   rel="noreferrer"
                   style={{ fontSize: "var(--text-sm)", color: "var(--accent-dark)" }}

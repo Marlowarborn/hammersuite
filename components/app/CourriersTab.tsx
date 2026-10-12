@@ -283,7 +283,7 @@ export default function CourriersTab({ dossierId }: Props) {
                 </Badge>
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <Button variant="secondary" size="sm" onClick={() => openPreview(c)}>Voir</Button>
-                  {c.status !== "sent" && (
+                  {c.status === "generated" && (
                     <Button variant="ghost" size="sm" onClick={() => markSent(c)}>Marquer envoyé</Button>
                   )}
                 </div>

@@ -12,9 +12,6 @@ export default function Topbar() {
   const [initials, setInitials] = useState("--");
   const [showMenu, setShowMenu] = useState(false);
 
-  useEffect(() => {
-    loadUser();
-  }, []);
 
   const loadUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -40,6 +37,11 @@ export default function Topbar() {
       if (org?.name) setOrgName(org.name);
     }
   };
+
+  useEffect(() => {
+    loadUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
