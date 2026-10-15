@@ -284,6 +284,7 @@ export default function ObjetJudiciaireForm({ dossierId, organisationId, default
             )}
           </div>
           {photoPreview && (
+            // eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob:)
             <img
               src={photoPreview}
               alt="Aperçu"
