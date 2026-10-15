@@ -122,7 +122,9 @@ export default function CourriersTab({ dossierId }: Props) {
       });
       const json = await res.json();
       if (!res.ok) {
-        toast.error(json.error || "Erreur génération courrier.");
+        // Le brouillon (et son numéro) existe même si le PDF a échoué : on l'affiche tout de suite.
+        toast.error(json.detail ? `${json.error || "Erreur génération courrier."} ${json.detail}` : json.error || "Erreur génération courrier.");
+        await load();
         return;
       }
       toast.success("Courrier généré.");

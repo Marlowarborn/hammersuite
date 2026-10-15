@@ -220,13 +220,15 @@ export async function POST(req: NextRequest) {
   const numeroFacture = brouillon?.reference ?? null;
 
   // Erreur renvoyée au client ; signale le brouillon conservé quand un numéro est réservé.
-  const echec = (message: string, status: number) =>
-    brouillon
-      ? err(`${message} (brouillon conservé, numéro ${brouillon.reference} réservé)`, status, {
-          courrier_id: brouillon.id,
-          reference: brouillon.reference,
-        })
-      : err(message, status);
+  const echec = (message: string, status: number, detail?: string) => {
+    const extra = {
+      ...(brouillon ? { courrier_id: brouillon.id, reference: brouillon.reference } : {}),
+      ...(detail ? { detail } : {}),
+    };
+    return brouillon
+      ? err(`${message} (brouillon conservé, numéro ${brouillon.reference} réservé)`, status, extra)
+      : err(message, status, extra);
+  };
 
   const payload = await buildPayload(supabase, {
     dossier,
@@ -284,7 +286,8 @@ export async function POST(req: NextRequest) {
     }
     if (doc?.status === "failure" || doc?.status === "error") {
       console.error("[generate-courrier] échec PDFMonkey", docId, doc.failure_cause);
-      return echec("Génération du courrier échouée (modèle PDF à vérifier)", 502);
+      // La cause vient de PDFMonkey (ex. plan gratuit, polices externes) : utile à l'étude, pas secrète.
+      return echec("Génération du courrier échouée (modèle PDF à vérifier)", 502, typeof doc.failure_cause === "string" ? doc.failure_cause : undefined);
     }
   }
 
