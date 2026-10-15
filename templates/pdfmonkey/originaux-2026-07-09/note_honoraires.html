@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; color: #0f0f0e; background: white; font-size: 10.5pt; line-height: 1.5; }
+.page { width: 210mm; min-height: 297mm; padding: 22mm 24mm; }
+
+.doc-header {
+display: flex; justify-content: space-between; align-items: flex-start;
+border-bottom: 1px solid #e8e7e3; padding-bottom: 6mm; margin-bottom: 12mm;
+}
+.doc-logo { font-family: 'Cormorant', serif; font-size: 13pt; font-weight: 500; color: #0f0f0e; margin-bottom: 3mm; }
+.doc-etude-infos { font-size: 8.5pt; color: #6b6b68; line-height: 1.6; }
+.doc-meta { text-align: right; }
+.doc-meta .titre { font-family: 'Cormorant', serif; font-size: 17pt; font-weight: 500; margin-bottom: 2mm; }
+.doc-meta .ref { font-size: 9pt; color: #6b6b68; font-family: monospace; }
+.doc-meta .date { font-size: 9pt; color: #6b6b68; margin-top: 1mm; }
+
+.destinataire { margin: 0 0 8mm 0; font-size: 10pt; }
+.destinataire .nom { font-weight: 500; color: #0f0f0e; }
+.destinataire .adresse { color: #6b6b68; font-size: 9pt; margin-top: 1mm; }
+
+.dossier-ref {
+font-size: 9pt; color: #6b6b68; margin-bottom: 10mm; padding-bottom: 4mm;
+border-bottom: 1px solid #f0efe9;
+}
+.dossier-ref strong { color: #0f0f0e; font-weight: 500; }
+
+h2 {
+font-family: 'Cormorant', serif; font-size: 13pt; font-weight: 500;
+margin: 0 0 3mm 0; padding-bottom: 2mm; border-bottom: 1px solid #e8e7e3;
+}
+
+table { width: 100%; border-collapse: collapse; margin-bottom: 8mm; font-size: 9.5pt; }
+th { text-align: left; padding: 3mm 3mm; background: #faf9f7; border-bottom: 1px solid #0f0f0e; color: #6b6b68; text-transform: uppercase; font-size: 7.5pt; letter-spacing: 0.05em; font-weight: 500; }
+td { padding: 3mm 3mm; border-bottom: 1px solid #f0efe9; }
+.num { text-align: right; white-space: nowrap; }
+
+.totaux { width: 65mm; margin-left: auto; font-size: 9.5pt; }
+.totaux td { padding: 2mm 3mm; border-bottom: none; }
+.totaux .total-ttc td { border-top: 1px solid #0f0f0e; padding-top: 3mm; font-weight: 500; font-family: 'Cormorant', serif; font-size: 13pt; }
+
+h3 { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.06em; color: #6b6b68; margin: 8mm 0 2mm 0; }
+.reglement-info { font-size: 9.5pt; line-height: 1.7; }
+.reglement-info .iban { font-family: monospace; letter-spacing: 0.02em; }
+
+.signature { margin-top: 16mm; text-align: right; }
+.signature .nom { font-weight: 500; }
+.signature .qualite { font-size: 8.5pt; font-style: italic; color: #6b6b68; margin-top: 1mm; }
+
+.page-footer {
+position: fixed; bottom: 10mm; left: 24mm; right: 24mm;
+font-size: 7.5pt; color: #b8b7b2; text-align: center;
+border-top: 1px solid #f0efe9; padding-top: 3mm;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="doc-header">
+<div>
+<div class="doc-logo">{{ etude.nom }}</div>
+<div class="doc-etude-infos">
+{% if etude.adresse %}{{ etude.adresse }}<br>{% endif %}
+{% if etude.code_postal or etude.ville %}{{ etude.code_postal }} {{ etude.ville }}<br>{% endif %}
+{% if etude.telephone %}{{ etude.telephone }}{% endif %}
+{% if etude.siret %} · SIRET {{ etude.siret }}{% endif %}
+</div>
+</div>
+<div class="doc-meta">
+<div class="titre">Note d'honoraires</div>
+<div class="ref">{{ honoraires.numero_facture }}</div>
+<div class="date">{{ honoraires.date_facture }}</div>
+</div>
+</div>
+
+<div class="destinataire">
+<div class="nom">{{ debiteur.nom }}</div>
+{% if debiteur.forme_juridique %}<div class="adresse">{{ debiteur.forme_juridique }}</div>{% endif %}
+{% if debiteur.adresse_complete %}<div class="adresse">{{ debiteur.adresse_complete }}</div>{% endif %}
+</div>
+
+<div class="dossier-ref">
+Dossier <strong>{{ dossier.numero }}</strong> — {{ dossier.nature }}
+</div>
+
+<h2>Prestation</h2>
+<table>
+<thead>
+<tr>
+<th>Description</th>
+<th class="num" style="width: 30mm;">Montant HT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>{{ honoraires.description_prestation }}</td>
+<td class="num">{{ honoraires.montant_ht }} €</td>
+</tr>
+</tbody>
+</table>
+
+<table class="totaux">
+<tr>
+<td>Total HT</td>
+<td class="num">{{ honoraires.montant_ht }} €</td>
+</tr>
+<tr>
+<td>TVA ({{ honoraires.taux_tva }} %)</td>
+<td class="num">{{ honoraires.montant_tva }} €</td>
+</tr>
+<tr class="total-ttc">
+<td>Total TTC</td>
+<td class="num">{{ honoraires.montant_ttc }} €</td>
+</tr>
+</table>
+
+<h3>Règlement</h3>
+<div class="reglement-info">
+Mode de règlement : {% if honoraires.mode_reglement == 'virement' %}Virement bancaire{% else %}Chèque{% endif %}<br>
+{% if honoraires.mode_reglement == 'virement' and honoraires.iban %}
+IBAN : <span class="iban">{{ honoraires.iban }}</span><br>
+{% endif %}
+Référence à rappeler : {{ honoraires.numero_facture }}
+</div>
+
+<div class="signature">
+<div class="nom">{{ signataire.nom_complet }}</div>
+{% if signataire.qualite %}<div class="qualite">{{ signataire.qualite }}</div>{% endif %}
+</div>
+
+<div class="page-footer">{{ etude.nom }} — Note d'honoraires {{ honoraires.numero_facture }} — Dossier {{ dossier.numero }}</div>
+
+</div>
+</body>
+</html>
