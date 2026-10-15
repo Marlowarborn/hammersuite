@@ -19,11 +19,11 @@ function err(message: string, status: number) {
 }
 
 export async function POST(req: NextRequest) {
-  const body = (await req.json().catch(() => null)) as { courrier_id?: string } | null;
-  if (!body?.courrier_id) return err("courrier_id requis", 400);
-
   const session = await requireSession();
   if (isResponse(session)) return session;
+
+  const body = (await req.json().catch(() => null)) as { courrier_id?: string } | null;
+  if (!body?.courrier_id) return err("courrier_id requis", 400);
   const { supabase } = session;
   const organisationId = session.profile.organisation_id;
 

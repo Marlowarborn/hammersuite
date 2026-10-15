@@ -50,6 +50,10 @@ npm run test:sql   # migrations + tests d'isolation RLS sur Postgres embarqué (
 npm run test:e2e   # parcours complet dans l'app, en local, avec le compte de démo du seed
 ```
 
+`npm run smoke` (ou `npm run smoke -- <url>`) contrôle un déploiement sans rien écrire : pages
+publiques, redirections vers la connexion, routes API fermées sans session, redirection ouverte
+refusée, en-têtes de sécurité, aucun secret dans le HTML. À lancer après chaque déploiement.
+
 `test:e2e` suppose le serveur lancé sur le port 3100 (`npm run dev -- -p 3100`) et le Chrome
 installé. Il crée des données marquées `[recette]` et les supprime à la fin ; il refuse de
 tourner ailleurs qu'en local.

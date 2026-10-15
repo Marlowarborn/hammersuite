@@ -143,6 +143,11 @@ async function archiverPdf(supabase: Supabase, url: string, chemin: string): Pro
 
 export async function POST(req: NextRequest) {
   const debut = Date.now();
+
+  // La session d'abord : sans utilisateur, la route ne révèle rien de sa configuration ni de ses règles.
+  const session = await requireSession();
+  if (isResponse(session)) return session;
+
   const apiKey = process.env.PDFMONKEY_API_KEY;
   if (!apiKey) return err("PDFMONKEY_API_KEY non configuré", 500);
 
@@ -166,8 +171,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const session = await requireSession();
-  if (isResponse(session)) return session;
   const { supabase, user } = session;
   const organisationId = session.profile.organisation_id;
 
