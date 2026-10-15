@@ -45,6 +45,15 @@ npx next build
 
 La CI GitHub Actions (`.github/workflows/ci.yml`) exécute ces trois commandes.
 
+```bash
+npm run test:sql   # migrations + tests d'isolation RLS sur Postgres embarqué (PGlite)
+npm run test:e2e   # parcours complet dans l'app, en local, avec le compte de démo du seed
+```
+
+`test:e2e` suppose le serveur lancé sur le port 3100 (`npm run dev -- -p 3100`) et le Chrome
+installé. Il crée des données marquées `[recette]` et les supprime à la fin ; il refuse de
+tourner ailleurs qu'en local.
+
 ## Structure
 
 - `app/` : pages (App Router) et routes API (`app/api/*`).

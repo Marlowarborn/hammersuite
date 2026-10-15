@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:sql": "node supabase/tests/run.mjs"
+    "test:sql": "node supabase/tests/run.mjs",
+    "test:e2e": "node e2e/recette.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.0",
@@ -25,6 +26,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^16.3.8",
+    "playwright-core": "^1.64.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
