@@ -13,9 +13,11 @@ const steps = [
   ["0001_schema", join(root, "migrations", "0001_schema.sql")],
   ["0002_rls", join(root, "migrations", "0002_rls.sql")],
   ["0003_checklist_unique", join(root, "migrations", "0003_checklist_unique.sql")],
+  ["0004_index_cles_etrangeres", join(root, "migrations", "0004_index_cles_etrangeres.sql")],
   ["rejeu 0001 (idempotence)", join(root, "migrations", "0001_schema.sql")],
   ["rejeu 0002 (idempotence)", join(root, "migrations", "0002_rls.sql")],
   ["rejeu 0003 (idempotence)", join(root, "migrations", "0003_checklist_unique.sql")],
+  ["rejeu 0004 (idempotence)", join(root, "migrations", "0004_index_cles_etrangeres.sql")],
   ["seed", join(root, "seed.sql")],
   ["tests RLS", join(here, "rls.sql")],
 ];
