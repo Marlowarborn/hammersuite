@@ -440,6 +440,7 @@ export default function DossierDetailPage() {
                 {filteredObjets.map((objet, i) => (
                   <div key={objet.id} style={{ padding: "10px 20px", borderBottom: i < filteredObjets.length - 1 ? "1px solid var(--border)" : "none", display: "grid", gridTemplateColumns: "60px 80px 1fr 120px 80px 100px 100px 120px", gap: 12, alignItems: "center" }}>
                     {objet.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- URL signée du stockage privé, durée courte
                       <img src={objet.photo_url} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: "var(--radius)", border: "1px solid var(--border)" }} />
                     ) : (
                       <div style={{ width: 44, height: 44, borderRadius: "var(--radius)", background: "var(--cream)", border: "1px solid var(--border)" }} />

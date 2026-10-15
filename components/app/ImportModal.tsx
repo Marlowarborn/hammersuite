@@ -58,7 +58,7 @@ export default function ImportModal({ onClose, onImport }: Props) {
 
       setObjets(data.objets.map((o: Record<string, unknown>) => ({ ...o, selected: true })));
       setStep("review");
-    } catch (err) {
+    } catch {
       setError("Erreur de connexion. Réessayez.");
       setStep("upload");
     }
@@ -81,6 +81,7 @@ export default function ImportModal({ onClose, onImport }: Props) {
   };
 
   const handleImport = () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- on retire la case à cocher avant l'import
     const selected = objets.filter(o => o.selected).map(({ selected, ...o }) => o);
     onImport(selected);
     onClose();

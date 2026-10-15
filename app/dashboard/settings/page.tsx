@@ -178,6 +178,16 @@ export default function SettingsPage() {
     if (!profile?.organisation_id) { toast.error("Organisation introuvable."); return; }
     setInviting(true);
 
+    // 0. Une invitation expirée pour la même adresse ne doit pas bloquer une nouvelle invitation.
+    await supabase
+      .from("invitations")
+      .delete()
+      .eq("organisation_id", profile.organisation_id)
+      .eq("email", email)
+      .is("accepted_at", null)
+      .lt("expires_at", new Date().toISOString());
+    setInvitations((prev) => prev.filter((inv) => !(inv.email === email && new Date(inv.expires_at).getTime() < Date.now())));
+
     // 1. L'invitation en base est la seule preuve que le trigger handle_new_user
     //    accepte pour rattacher le nouveau compte à l'organisation.
     const { data: invitation, error: invitationError } = await supabase
@@ -212,6 +222,13 @@ export default function SettingsPage() {
     setInvitations((prev) => [invitation, ...prev]);
     toast.success(`Lien d'invitation envoyé à ${email}.`);
     setInviteEmail("");
+  };
+
+  const revoquer = async (invitationId: string, email: string) => {
+    const { error } = await supabase.from("invitations").delete().eq("id", invitationId);
+    if (error) { toast.error(`Révocation impossible : ${error.message}`); return; }
+    setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
+    toast.success(`Invitation de ${email} révoquée.`);
   };
 
   const tabs = useMemo(
@@ -294,9 +311,18 @@ export default function SettingsPage() {
                       return (
                         <div key={inv.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderBottom: i < invitations.length - 1 ? "1px solid var(--border)" : "none" }}>
                           <p style={{ fontSize: "var(--text-md)", color: "var(--ink)" }}>{inv.email}</p>
-                          <p style={{ fontSize: "var(--text-xs)", color: expiree ? "var(--error)" : "var(--ink-2)", flexShrink: 0 }}>
-                            {expiree ? `Expirée le ${date}` : `Expire le ${date}`}
-                          </p>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+                            <p style={{ fontSize: "var(--text-xs)", color: expiree ? "var(--error)" : "var(--ink-2)" }}>
+                              {expiree ? `Expirée le ${date}` : `Expire le ${date}`}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => revoquer(inv.id, inv.email)}
+                              style={{ background: "none", border: "none", padding: 0, fontSize: "var(--text-xs)", color: "var(--ink-2)", cursor: "pointer", textDecoration: "underline" }}
+                            >
+                              {expiree ? "Retirer" : "Révoquer"}
+                            </button>
+                          </div>
                         </div>
                       );
                     })}

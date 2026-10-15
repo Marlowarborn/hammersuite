@@ -93,7 +93,7 @@ export default function SaisiePage() {
       return;
     }
 
-    const { error: insertError } = await supabase.from("objets").insert({
+    const { data: cree, error: insertError } = await supabase.from("objets").insert({
       organisation_id: profile.organisation_id,
       numero_repertoire: numero,
       date_entree: new Date().toISOString().split("T")[0],
@@ -108,12 +108,26 @@ export default function SaisiePage() {
       status: "en_attente",
       notes: form.notes,
       genere_par_ia: remplieParIa,
-    });
+    }).select("id").single();
 
-    if (insertError) {
-      setError("Erreur d'enregistrement: " + insertError.message);
+    if (insertError || !cree) {
+      setError("Erreur d'enregistrement : " + (insertError?.message ?? "réponse vide"));
       setStep("form");
       return;
+    }
+
+    // Photo conservée dans le bucket privé de l'étude ; la base garde le chemin, jamais une URL.
+    if (photoFile) {
+      const ext = (photoFile.name.split(".").pop() || "jpg").toLowerCase();
+      const chemin = `${profile.organisation_id}/${cree.id}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("objet-photos")
+        .upload(chemin, photoFile, { upsert: true, contentType: photoFile.type || undefined });
+      if (uploadError) {
+        setError("Objet enregistré, mais la photo n'a pas pu être conservée : " + uploadError.message);
+      } else {
+        await supabase.from("objets").update({ photo_path: chemin }).eq("id", cree.id);
+      }
     }
 
     setStep("done");
@@ -194,6 +208,7 @@ export default function SaisiePage() {
       {step === "analyzing" && (
         <div style={{ padding: 20 }}>
           {photoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob:)
             <img src={photoUrl} alt="Photo" style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", borderRadius: "var(--radius-lg)", marginBottom: 24 }} />
           )}
           <div style={{ textAlign: "center", padding: "24px 0" }}>
@@ -211,6 +226,7 @@ export default function SaisiePage() {
         <div style={{ padding: 20 }}>
           {photoUrl && (
             <div style={{ position: "relative", marginBottom: 20 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- aperçu local (blob:) */}
               <img src={photoUrl} alt="Photo" style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", borderRadius: "var(--radius-lg)" }} />
               <button onClick={() => { setPhotoUrl(null); setStep("photo"); }}
                 style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.5)", border: "none", borderRadius: "50%", width: 32, height: 32, color: "white", cursor: "pointer", fontSize: 16 }}>×</button>
