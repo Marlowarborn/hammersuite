@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+/* Plan PDFMonkey gratuit : aucune ressource externe. Polices de secours : serif pour Cormorant, sans-serif pour DM Sans. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; color: #0f0f0e; background: white; font-size: 10.5pt; line-height: 1.5; }
+.page { width: 210mm; min-height: 297mm; padding: 22mm 24mm; }
+
+.doc-header {
+display: flex; justify-content: space-between; align-items: flex-start;
+border-bottom: 1px solid #e8e7e3; padding-bottom: 6mm; margin-bottom: 14mm;
+}
+.doc-logo { font-family: 'Cormorant', serif; font-size: 13pt; font-weight: 500; color: #0f0f0e; margin-bottom: 3mm; }
+.doc-etude-infos { font-size: 8.5pt; color: #6b6b68; line-height: 1.6; }
+
+.destinataire { margin: 0 0 14mm auto; max-width: 80mm; font-size: 10pt; }
+.destinataire .nom { font-weight: 500; color: #0f0f0e; }
+.destinataire .adresse { color: #6b6b68; font-size: 9pt; margin-top: 1mm; }
+
+.lieu-date { text-align: right; font-style: italic; color: #6b6b68; font-size: 9.5pt; margin-bottom: 12mm; }
+
+.objet-line { font-size: 9.5pt; margin-bottom: 10mm; }
+.objet-line .label { color: #6b6b68; text-transform: uppercase; letter-spacing: 0.06em; font-size: 8pt; margin-right: 2mm; }
+
+.corps { text-align: justify; margin-bottom: 10mm; }
+.corps p { margin-bottom: 3mm; }
+
+.piece-jointe { font-size: 9pt; font-style: italic; color: #6b6b68; margin-top: 6mm; }
+
+.signature { margin-top: 18mm; text-align: right; }
+.signature .nom { font-weight: 500; }
+.signature .qualite { font-size: 8.5pt; font-style: italic; color: #6b6b68; margin-top: 1mm; }
+
+.page-footer {
+position: fixed; bottom: 10mm; left: 24mm; right: 24mm;
+font-size: 7.5pt; color: #b8b7b2; text-align: center;
+border-top: 1px solid #f0efe9; padding-top: 3mm;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="doc-header">
+<div>
+<div class="doc-logo">{{ etude.nom }}</div>
+<div class="doc-etude-infos">
+{% if etude.adresse %}{{ etude.adresse }}<br>{% endif %}
+{% if etude.code_postal or etude.ville %}{{ etude.code_postal }} {{ etude.ville }}<br>{% endif %}
+{% if etude.telephone %}{{ etude.telephone }}{% endif %}
+{% if etude.email %} · {{ etude.email }}{% endif %}
+</div>
+</div>
+</div>
+
+<div class="destinataire">
+<div class="nom">{{ destinataire.label }}</div>
+{% if destinataire.nom %}<div class="nom">{{ destinataire.nom }}</div>{% endif %}
+{% if destinataire.adresse %}<div class="adresse">{{ destinataire.adresse }}</div>{% endif %}
+</div>
+
+<div class="lieu-date">{{ lieu_emission }}, le {{ date_courrier }}</div>
+
+<div class="objet-line">
+<span class="label">Objet</span>{{ courrier.objet }}
+</div>
+
+<div class="corps">
+{{ courrier.corps }}
+</div>
+
+{% if courrier.piece_jointe_label %}
+<div class="piece-jointe">P.J. : {{ courrier.piece_jointe_label }}</div>
+{% endif %}
+
+<div class="signature">
+<div class="nom">{{ signataire.nom_complet }}</div>
+{% if signataire.qualite %}<div class="qualite">{{ signataire.qualite }}</div>{% endif %}
+</div>
+
+<div class="page-footer">{{ etude.nom }} — Dossier {{ dossier.numero }}</div>
+
+</div>
+</body>
+</html>

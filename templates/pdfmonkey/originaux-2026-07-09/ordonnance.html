@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; color: #0f0f0e; background: white; font-size: 10.5pt; line-height: 1.5; }
+.page { width: 210mm; min-height: 297mm; padding: 22mm 24mm; }
+
+.doc-header {
+display: flex; justify-content: space-between; align-items: flex-start;
+border-bottom: 1px solid #e8e7e3; padding-bottom: 6mm; margin-bottom: 10mm;
+}
+.doc-logo { font-family: 'Cormorant', serif; font-size: 13pt; font-weight: 500; color: #0f0f0e; margin-bottom: 3mm; }
+.doc-etude-infos { font-size: 8.5pt; color: #6b6b68; line-height: 1.6; }
+.lieu-date { text-align: right; font-style: italic; color: #6b6b68; font-size: 9.5pt; }
+
+.doc-title {
+font-family: 'Cormorant', serif; font-size: 24pt; font-weight: 500;
+text-align: center; margin-bottom: 10mm; letter-spacing: -0.01em;
+text-transform: uppercase;
+}
+
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm 8mm; margin-bottom: 8mm; }
+.info-item .label { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.06em; color: #6b6b68; margin-bottom: 0.5mm; }
+.info-item .value { font-size: 10pt; color: #0f0f0e; font-weight: 500; }
+
+h2 {
+font-family: 'Cormorant', serif; font-size: 13pt; font-weight: 500;
+margin: 8mm 0 3mm 0; padding-bottom: 2mm; border-bottom: 1px solid #e8e7e3;
+}
+
+.corps { text-align: justify; margin-bottom: 8mm; }
+.corps p { margin-bottom: 3mm; }
+.corps strong { font-weight: 500; }
+
+.signature { margin-top: 20mm; text-align: right; }
+.signature .role { font-size: 9.5pt; color: #6b6b68; margin-bottom: 12mm; }
+.signature .nom { font-weight: 500; }
+
+.page-footer {
+position: fixed; bottom: 10mm; left: 24mm; right: 24mm;
+font-size: 7.5pt; color: #b8b7b2; text-align: center;
+border-top: 1px solid #f0efe9; padding-top: 3mm;
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="doc-header">
+<div>
+<div class="doc-logo">{{ etude.nom }}</div>
+<div class="doc-etude-infos">
+{% if etude.adresse %}{{ etude.adresse }}<br>{% endif %}
+{% if etude.code_postal or etude.ville %}{{ etude.code_postal }} {{ etude.ville }}{% endif %}
+</div>
+</div>
+<div class="lieu-date">{{ lieu_emission }}, le {{ date_courrier }}</div>
+</div>
+
+<div class="doc-title">Ordonnance</div>
+
+<div class="info-grid">
+<div class="info-item">
+<div class="label">Tribunal</div>
+<div class="value">{{ tribunal.nom }}</div>
+</div>
+<div class="info-item">
+<div class="label">N° de dossier</div>
+<div class="value">{{ dossier.numero }}</div>
+</div>
+<div class="info-item">
+<div class="label">Nature</div>
+<div class="value">{{ dossier.nature }}</div>
+</div>
+<div class="info-item">
+<div class="label">Date d'ouverture</div>
+<div class="value">{{ dossier.date_ouverture }}</div>
+</div>
+{% if dossier.date_jugement %}
+<div class="info-item">
+<div class="label">Date du jugement</div>
+<div class="value">{{ dossier.date_jugement }}</div>
+</div>
+{% endif %}
+{% if dossier.decret %}
+<div class="info-item">
+<div class="label">Décret</div>
+<div class="value">{{ dossier.decret }}</div>
+</div>
+{% endif %}
+</div>
+
+<h2>Débiteur</h2>
+<p>
+<strong>{{ debiteur.nom }}</strong>{% if debiteur.forme_juridique %} ({{ debiteur.forme_juridique }}){% endif %}<br>
+{{ debiteur.adresse_complete }}
+</p>
+
+<h2>Juge commissaire</h2>
+<p>
+{{ juge_commissaire.nom }}<br>
+{% if juge_commissaire.adresse %}{{ juge_commissaire.adresse }}{% endif %}
+</p>
+
+<h2>Décision</h2>
+<div class="corps">
+<p>
+Nous, Juge commissaire, vu les pièces de la procédure, vu la requête de
+{{ signataire.nom_complet }}, commissaire-priseur judiciaire, désigné par
+ordonnance pour procéder à l'inventaire et à la vente aux enchères publiques
+des biens dépendant de la procédure {{ dossier.nature }} ouverte
+à l'encontre de <strong>{{ debiteur.nom }}</strong>,
+</p>
+<p>
+Autorisons ledit commissaire-priseur à procéder à la vente aux enchères
+publiques des biens inventoriés, selon les modalités et conditions usuelles
+de sa profession.
+</p>
+<p>
+Disons que le produit de la vente sera reversé entre les mains du
+{% if mandataire.nom %}mandataire judiciaire {{ mandataire.nom }}{% else %}mandataire judiciaire désigné{% endif %},
+déduction faite des frais et émoluments légaux.
+</p>
+</div>
+
+<div class="signature">
+<div class="role">Le Juge commissaire</div>
+<div class="nom">{{ juge_commissaire.nom }}</div>
+</div>
+
+<div class="page-footer">{{ etude.nom }} — Dossier {{ dossier.numero }}</div>
+
+</div>
+</body>
+</html>
