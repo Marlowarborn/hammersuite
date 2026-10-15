@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:sql": "node supabase/tests/run.mjs",
-    "test:e2e": "node e2e/recette.mjs"
+    "test:e2e": "node e2e/recette.mjs",
+    "docs:metier": "node --no-warnings scripts/generer-modele-metier.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.0",
